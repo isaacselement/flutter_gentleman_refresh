@@ -7,10 +7,13 @@ class GentlemanPhysics extends BouncingScrollPhysics {
   double trailing;
 
   bool? isOutOfRang;
+  void Function(GentlemanPhysics physics, ScrollPosition position)? onRangeChanged;
+  void Function(GentlemanPhysics physics, ScrollPosition position)? onPositionChanged;
+  void Function(GentlemanPhysics physics, ScrollPosition position)? onPositionChangedOutOfRange;
 
-  void Function(ScrollPosition position)? onRangeChanged;
-
-  void Function(ScrollPosition position)? onOutOfRangePositionChanged;
+  bool? isPrisonBreak;
+  void Function(GentlemanPhysics physics, ScrollPosition position, bool isInPrison)? onHeaderPrisonChanged;
+  void Function(GentlemanPhysics physics, ScrollPosition position, bool isInPrison)? onFooterPrisonChanged;
 
   ScrollMetrics? _metrics;
 
@@ -21,14 +24,55 @@ class GentlemanPhysics extends BouncingScrollPhysics {
 
     position?.addListener(() {
       ScrollPosition p = position!;
+      bool outOfRange = p.outOfRange;
 
-      if (isOutOfRang != p.outOfRange) {
-        isOutOfRang = p.outOfRange;
-        onRangeChanged?.call(p);
+      // range changed
+      if (isOutOfRang != outOfRange) {
+        isOutOfRang = outOfRange;
+        onRangeChanged?.call(this, p);
       }
 
-      if (p.outOfRange) {
-        onOutOfRangePositionChanged?.call(p);
+      // position changed
+      if (onPositionChanged != null) {
+        onPositionChanged?.call(this, p);
+      }
+
+      if (outOfRange) {
+        // position changed on out of range
+        if (onPositionChangedOutOfRange != null) {
+          onPositionChangedOutOfRange?.call(this, p);
+        }
+
+        // prison changed on out of range
+        if (onHeaderPrisonChanged != null || onFooterPrisonChanged != null) {
+          double exceed = 0;
+          bool isOutLeading = p.pixels < p.minScrollExtent;
+          bool isOutTrailing = p.pixels > p.maxScrollExtent;
+          if (isOutLeading) {
+            exceed = p.minScrollExtent - p.pixels;
+          } else if (isOutTrailing) {
+            exceed = p.pixels - p.maxScrollExtent;
+          }
+
+          bool isPrisonChange = false;
+          if (isPrisonBreak != true && (isOutLeading && exceed > leading || isOutTrailing && exceed > trailing)) {
+            isPrisonBreak = true;
+            isPrisonChange = true;
+          } else if (isPrisonBreak == true && (isOutLeading && exceed < leading || isOutTrailing && exceed < trailing)) {
+            isPrisonBreak = false;
+            isPrisonChange = true;
+          }
+          if (isPrisonChange) {
+            if (isOutLeading) {
+              onHeaderPrisonChanged?.call(this, p, isPrisonBreak!);
+            } else if (isOutTrailing) {
+              onFooterPrisonChanged?.call(this, p, isPrisonBreak!);
+            }
+          }
+        }
+      } else {
+        // set null when if in range
+        if (isPrisonBreak != null) isPrisonBreak = null;
       }
     });
   }
@@ -41,67 +85,44 @@ class GentlemanPhysics extends BouncingScrollPhysics {
   }
 
   @override
-  bool shouldAcceptUserOffset(ScrollMetrics position) => true; // AlwaysScrollableScrollPhysics
+  bool shouldAcceptUserOffset(ScrollMetrics position) {
+    return true; // AlwaysScrollableScrollPhysics
+  }
 
   @override
   double applyPhysicsToUserOffset(ScrollMetrics position, double offset) {
-    __print_ScrollMetrics__('UserOffset', position);
+    // __print_ScrollMetrics__('UserOffset', position);
     if (_metrics != position) metrics = position;
     double result = super.applyPhysicsToUserOffset(position, offset);
     print('applyPhysicsToUserOffset>>> $offset, $result');
     return result;
   }
 
-  // bool isExceed = false;
-
   @override
   double applyBoundaryConditions(ScrollMetrics position, double value) {
     double result = super.applyBoundaryConditions(position, value);
-    // print(
-    //     'value: $value, position: max: ${position.maxScrollExtent},'
-    //         ' min: ${position.minScrollExtent},'
-    //         ' pixels: ${position.pixels}, '
-    //         'dimension: ${position.viewportDimension}, '
-    //         'outOfRange: ${position.outOfRange}, '
-    //         'axis: ${position.axisDirection},');
-    // // result = (value - 90) - position.maxScrollExtent;
-    // double nowPixels = position.pixels;
-    // double nextPixels = value;
-    // if (position.axisDirection == AxisDirection.down && position.outOfRange) {
-    //     double overdue = position.pixels - position.maxScrollExtent;
-    //     print('----> overdue: $overdue');
-    //     if (overdue > 90 && isExceed == false) {
-    //       // result = (value - 90) - position.maxScrollExtent;
-    //       // isExceed = true;
-    //       // print('----> overdue return !!!!: $result');
-    //       // return result;
-    //     }
-    // }
-    // print('applyBoundaryConditions>>> $result');
     return result;
   }
 
   @override
   Simulation? createBallisticSimulation(ScrollMetrics position, double velocity) {
-    print('createBallisticSimulation>>> velocity $velocity, tolerance: ${this.tolerance}');
-    __print_ScrollMetrics__('Ballistic', position);
+    // print('createBallisticSimulation>>> velocity $velocity, tolerance: ${this.tolerance}');
+    // __print_ScrollMetrics__('Ballistic', position);
     if (_metrics != position) metrics = position;
 
     final Tolerance tolerance = this.tolerance;
     if (velocity.abs() >= tolerance.velocity || position.outOfRange) {
-      print('Return a bouncing simulation with leading: $leading, trailing: $trailing');
-      Simulation simulation;
-      simulation = BouncingScrollSimulation(
+      // print('Return a bouncing simulation with leading: $leading, trailing: $trailing');
+      return BouncingScrollSimulation(
         spring: spring,
         velocity: velocity,
         position: position.pixels,
         tolerance: tolerance,
-        leadingExtent: position.minScrollExtent - leading,
-        trailingExtent: position.maxScrollExtent + trailing,
+        leadingExtent: position.minScrollExtent - (isPrisonBreak == true ? leading : 0),
+        trailingExtent: position.maxScrollExtent + (isPrisonBreak == true ? trailing : 0),
       );
-      return simulation;
     }
-    print('return a null simulation');
+    // print('return a null simulation');
     return null;
   }
 

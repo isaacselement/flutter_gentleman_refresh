@@ -23,7 +23,7 @@ class IndicatorHeaderState extends State<IndicatorHeader> with SingleTickerProvi
 
   @override
   void initState() {
-    animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
+    animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 100));
     super.initState();
   }
 
@@ -56,7 +56,7 @@ class IndicatorFooterState extends State<IndicatorFooter> with SingleTickerProvi
 
   @override
   void initState() {
-    animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
+    animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 100));
     super.initState();
   }
 

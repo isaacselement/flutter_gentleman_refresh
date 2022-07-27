@@ -1,10 +1,10 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_gentleman_refresh/behavior/gentleman_behavior.dart';
 import 'package:flutter_gentleman_refresh/behavior/gentleman_physics.dart';
 import 'package:flutter_gentleman_refresh/brother.dart';
+import 'package:flutter_gentleman_refresh/elements_util.dart';
 import 'package:flutter_gentleman_refresh/view/indicator/indicator.dart';
 
 class GentlemanRefresh extends StatefulWidget {
@@ -25,13 +25,14 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
   @override
   void initState() {
     physics = GentlemanPhysics(leading: 60, trailing: 60);
-    physics.onRangeChanged = (ScrollPosition position) {
+    physics.onRangeChanged = (GentlemanPhysics physics, ScrollPosition position) {
       headerBtv.value = -60.0;
       footerBtv.value = -60.0;
     };
-    physics.onOutOfRangePositionChanged = (ScrollPosition position) {
+    physics.onPositionChangedOutOfRange = (GentlemanPhysics physics, ScrollPosition position) {
       print('>>>>>>>>>>>>>> outOfRangeCallback: $position');
-      print('>>>>>>>>>>>>>> outOfRangeCallback position.pixels: ${position.pixels}');
+      print('>>>>>>>>>>>>>> outOfRangeCallback activity: ${position.activity}');
+      // print('>>>>>>>>>>>>>> outOfRangeCallback position.pixels: ${position.pixels}');
 
       bool isExceedOnHeader = position.pixels < position.minScrollExtent;
       double bound = isExceedOnHeader ? position.minScrollExtent : position.maxScrollExtent;
@@ -44,7 +45,20 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
         double v = (-60.0) - exceed;
         footerBtv.value = min(0, v);
       }
-
+    };
+    physics.onHeaderPrisonChanged = (GentlemanPhysics physics, ScrollPosition position, bool isInPrison) {
+      if (isInPrison) {
+        ElementsUtil.getStateOfType<IndicatorHeaderState>(context)?.animationController.forward();
+      } else {
+        ElementsUtil.getStateOfType<IndicatorHeaderState>(context)?.animationController.reverse();
+      }
+    };
+    physics.onFooterPrisonChanged = (GentlemanPhysics physics, ScrollPosition position, bool isInPrison) {
+      if (isInPrison) {
+        ElementsUtil.getStateOfType<IndicatorFooterState>(context)?.animationController.forward();
+      } else {
+        ElementsUtil.getStateOfType<IndicatorFooterState>(context)?.animationController.reverse();
+      }
     };
     super.initState();
   }
