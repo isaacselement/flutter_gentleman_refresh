@@ -1,11 +1,39 @@
 import 'package:flutter/material.dart';
 
 class GentlemanPhysics extends BouncingScrollPhysics {
+  GentlemanPhysics({ScrollPhysics? parent, this.leading = 0, this.trailing = 0}) : super(parent: parent);
 
-  const GentlemanPhysics({ScrollPhysics? parent, this.leading = 90, this.trailing = 90}) : super(parent: parent);
+  double leading;
+  double trailing;
 
-  final double leading;
-  final double trailing;
+  bool? isOutOfRang;
+
+  void Function(ScrollPosition position)? onRangeChanged;
+
+  void Function(ScrollPosition position)? onOutOfRangePositionChanged;
+
+  ScrollMetrics? _metrics;
+
+  ScrollMetrics get metrics => _metrics!;
+
+  set metrics(ScrollMetrics v) {
+    _metrics = v;
+
+    position?.addListener(() {
+      ScrollPosition p = position!;
+
+      if (isOutOfRang != p.outOfRange) {
+        isOutOfRang = p.outOfRange;
+        onRangeChanged?.call(p);
+      }
+
+      if (p.outOfRange) {
+        onOutOfRangePositionChanged?.call(p);
+      }
+    });
+  }
+
+  ScrollPosition? get position => _metrics is ScrollPosition ? _metrics as ScrollPosition : null;
 
   @override
   GentlemanPhysics applyTo(ScrollPhysics? ancestor) {
@@ -17,8 +45,10 @@ class GentlemanPhysics extends BouncingScrollPhysics {
 
   @override
   double applyPhysicsToUserOffset(ScrollMetrics position, double offset) {
+    __print_ScrollMetrics__('UserOffset', position);
+    if (_metrics != position) metrics = position;
     double result = super.applyPhysicsToUserOffset(position, offset);
-    print('applyPhysicsToUserOffset>>> $result');
+    print('applyPhysicsToUserOffset>>> $offset, $result');
     return result;
   }
 
@@ -54,11 +84,12 @@ class GentlemanPhysics extends BouncingScrollPhysics {
   @override
   Simulation? createBallisticSimulation(ScrollMetrics position, double velocity) {
     print('createBallisticSimulation>>> velocity $velocity, tolerance: ${this.tolerance}');
-    __print_ScrollMetrics__(position);
+    __print_ScrollMetrics__('Ballistic', position);
+    if (_metrics != position) metrics = position;
 
     final Tolerance tolerance = this.tolerance;
     if (velocity.abs() >= tolerance.velocity || position.outOfRange) {
-      print('return a bouncing simulation');
+      print('Return a bouncing simulation with leading: $leading, trailing: $trailing');
       Simulation simulation;
       simulation = BouncingScrollSimulation(
         spring: spring,
@@ -74,9 +105,10 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     return null;
   }
 
-  __print_ScrollMetrics__(ScrollMetrics position) {
+  __print_ScrollMetrics__(String tag, ScrollMetrics position) {
     print(''
-        '[ScrollMetrics] '
+        '[ScrollMetrics] [$tag] '
+        'hashCode: ${position.hashCode}, '
         'outOfRange: ${position.outOfRange}, '
         'viewportDimension: ${position.viewportDimension}, '
         'axisDirection: ${position.axisDirection}, '
