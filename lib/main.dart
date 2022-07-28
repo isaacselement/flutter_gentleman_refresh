@@ -44,11 +44,17 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: Center(
         child: GentlemanRefresh(
+          onRefresh: () async {
+            await Future.delayed(const Duration(milliseconds: 3000));
+          },
+          onLoad: () async {
+            await Future.delayed(const Duration(milliseconds: 3000));
+          },
           child: CustomScrollView(
             slivers: [
               SliverList(
                 delegate: SliverChildBuilderDelegate(
-                      (context, index) {
+                  (context, index) {
                     if (index % 2 == 1) {
                       return const SizedBox(height: 1, child: ColoredBox(color: Colors.transparent));
                     }
@@ -70,9 +76,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ],
           ),
-        )
-
-
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -102,14 +106,14 @@ class _MyHomePageState extends State<MyHomePage> {
           if (physics.position == null) {
             return;
           }
-          ScrollPosition pos = physics.position!;
-          double pixels = pos.pixels;
-          double maxLength = pos.maxScrollExtent;
+          ScrollPosition p = physics.position!;
+          double pixels = p.pixels;
+          double maxLength = p.maxScrollExtent;
           Duration duration = const Duration(milliseconds: 500);
           if (pixels < maxLength / 2) {
-            pos.animateTo(-physics.leading, duration: duration, curve: Curves.bounceOut);
+            p.animateTo(-physics.leading, duration: duration, curve: Curves.bounceOut);
           } else {
-            pos.animateTo(pos.maxScrollExtent + physics.trailing, duration: duration, curve: Curves.bounceOut);
+            p.animateTo(p.maxScrollExtent + physics.trailing, duration: duration, curve: Curves.bounceOut);
           }
         },
         tooltip: 'Increment',
