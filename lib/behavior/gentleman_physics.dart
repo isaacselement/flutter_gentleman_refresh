@@ -21,13 +21,13 @@ class GentlemanPhysics extends BouncingScrollPhysics {
   void Function(GentlemanPhysics physics, ScrollPosition position, bool isOutOfPrison)? onPrisonStatusChanged;
 
   /// user drag or release event. isReleasedFinger = true means that finger up event, else finger down event
-  bool _userDragged = false;
-  bool? isUserRelease;
-  void Function(GentlemanPhysics physics, ScrollPosition position, bool isReleasedFinger)? onUserEventChanged;
+  GentleDragType? dragType;
+  GentleEventType? userEventType;
+  void Function(GentlemanPhysics physics, ScrollPosition position, GentleEventType releaseType)? onUserEventChanged;
 
-  set setUserIsRelease(v) {
-    if (isUserRelease != v) {
-      isUserRelease = v;
+  set setUserEvent(GentleEventType v) {
+    if (userEventType != v) {
+      userEventType = v;
       __log__('onUserEventChanged: $v');
       onUserEventChanged?.call(this, position!, v);
     }
@@ -58,13 +58,16 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     // range changed
     if (isOutOfRang != outOfRange) {
       isOutOfRang = outOfRange;
-      __log__('onRangeChanged');
+      __log__('onRangeChanged: $outOfRange');
       onRangeChanged?.call(this, p);
     }
 
     if (!outOfRange) {
-      // set null when if in range
+      // reset they to null, if in range or in range again
       if (isOutOfPrison != null) isOutOfPrison = null;
+      if (dragType == null) {
+        if (userEventType != null) userEventType = null;
+      }
       return;
     }
 
@@ -111,9 +114,9 @@ class GentlemanPhysics extends BouncingScrollPhysics {
   @override
   double applyPhysicsToUserOffset(ScrollMetrics position, double offset) {
     if (_metrics != position) metrics = position;
-    if (_userDragged == false) {
-      _userDragged = true;
-      setUserIsRelease = false;
+    if (dragType == null) {
+      dragType = GentleDragType.finger;
+      setUserEvent = GentleEventType.fingerDragging;
     }
 
     double result = super.applyPhysicsToUserOffset(position, offset);
@@ -132,9 +135,11 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     // __log__('createBallisticSimulation>>> velocity $velocity, tolerance: ${this.tolerance}');
     // __log_ScrollMetrics__('Ballistic', position);
     if (_metrics != position) metrics = position;
-    if (_userDragged == true) {
-      _userDragged = false;
-      setUserIsRelease = true;
+    if (dragType != null) {
+      GentleEventType event = dragType == GentleDragType.finger ? GentleEventType.fingerReleased : GentleEventType.autoReleased;
+      setUserEvent = event;
+
+      dragType = null;
     }
 
     final Tolerance tolerance = this.tolerance;
@@ -172,3 +177,7 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     print(message);
   }
 }
+
+enum GentleDragType { finger, auto }
+
+enum GentleEventType { fingerDragging, fingerReleased, autoReleased }

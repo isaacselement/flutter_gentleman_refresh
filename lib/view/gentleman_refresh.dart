@@ -34,10 +34,6 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
       footerBtv.value = -60.0;
     };
     physics.onPositionChangedOutOfRange = (GentlemanPhysics physics, ScrollPosition position) {
-      // print('>>>>>>>>>>>>>> outOfRangeCallback: $position');
-      // print('>>>>>>>>>>>>>> outOfRangeCallback activity: ${position.activity}');
-      // print('>>>>>>>>>>>>>> outOfRangeCallback position.pixels: ${position.pixels}');
-
       bool isOnHeader = position.pixels < position.minScrollExtent;
       double bound = isOnHeader ? position.minScrollExtent : position.maxScrollExtent;
       double exceed = bound - position.pixels;
@@ -66,8 +62,9 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
         }
       }
     };
-    physics.onUserEventChanged = (GentlemanPhysics physics, ScrollPosition position, bool isRelease) {
-      if (isRelease && physics.isOutOfPrison == true) {
+    physics.onUserEventChanged = (GentlemanPhysics physics, ScrollPosition position, GentleEventType eventType) {
+      if (eventType != GentleEventType.fingerDragging && physics.isOutOfPrison == true) {
+        print('>>>>>>>>>>>>>><<<<<<<<<< refresh!!!!');
         bool isOnHeader = position.pixels < position.minScrollExtent;
         () async {
           if (isOnHeader) {

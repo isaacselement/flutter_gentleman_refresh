@@ -113,7 +113,10 @@ class _MyHomePageState extends State<MyHomePage> {
           double maxLength = p.maxScrollExtent;
           Duration duration = const Duration(milliseconds: 500);
           if (pixels < maxLength / 2) {
-            p.animateTo(-physics.leading, duration: duration, curve: Curves.bounceOut);
+            p.animateTo(-physics.leading, duration: duration, curve: Curves.bounceOut).then((value) {
+              physics.dragType = GentleDragType.auto;
+              print('animation is done ~~~~~~~');
+            });
           } else {
             p.animateTo(p.maxScrollExtent + physics.trailing, duration: duration, curve: Curves.bounceOut);
           }
