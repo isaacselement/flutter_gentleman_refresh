@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class GentlemanPhysics extends BouncingScrollPhysics {
   GentlemanPhysics({ScrollPhysics? parent, this.leading = 0, this.trailing = 0}) : super(parent: parent);
 
-  /// we define a concept of prison break if position exceed leading/trailing offset
+  /// we define a concept of outOfPrison, which meaning the dragged position exceed the leading/trailing threshold
   double leading;
   double trailing;
 
@@ -17,18 +17,20 @@ class GentlemanPhysics extends BouncingScrollPhysics {
   /// caller should use p.pixels < p.minScrollExtent(or p.pixels > p.maxScrollExtent) for checking isHeader/isFooter or not
 
   /// indicate that can be refreshed when release your finger (out of range an exceed the leading/trailing offset)
-  bool? isPrisonBreak;
-  void Function(GentlemanPhysics physics, ScrollPosition position, bool isInPrison)? onPrisonStatusChanged;
+  bool? isOutOfPrison;
+  void Function(GentlemanPhysics physics, ScrollPosition position, bool isOutOfPrison)? onPrisonStatusChanged;
 
-  /// user drag or release notification
+  /// user drag or release event. isReleasedFinger = true means that finger up event, else finger down event
+  bool _userDragged = false;
   bool? isUserRelease;
-  void Function(GentlemanPhysics physics, ScrollPosition position, bool isRelease)? onUserEventChanged;
+  void Function(GentlemanPhysics physics, ScrollPosition position, bool isReleasedFinger)? onUserEventChanged;
 
   set setUserIsRelease(v) {
     if (isUserRelease != v) {
       isUserRelease = v;
+      __log__('onUserEventChanged: $v');
+      onUserEventChanged?.call(this, position!, v);
     }
-    onUserEventChanged?.call(this, position!, v);
   }
 
   ScrollMetrics? _metrics;
@@ -56,42 +58,43 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     // range changed
     if (isOutOfRang != outOfRange) {
       isOutOfRang = outOfRange;
+      __log__('onRangeChanged');
       onRangeChanged?.call(this, p);
     }
 
     if (!outOfRange) {
       // set null when if in range
-      if (isPrisonBreak != null) isPrisonBreak = null;
+      if (isOutOfPrison != null) isOutOfPrison = null;
       return;
     }
 
     // position changed on out of range
     if (onPositionChangedOutOfRange != null) {
+      // __log__('onPositionChangedOutOfRange');
       onPositionChangedOutOfRange?.call(this, p);
     }
 
     // prison changed on out of range
-    if (onPrisonStatusChanged != null) {
-      double exceed = 0;
-      bool isOutLeading = p.pixels < p.minScrollExtent;
-      bool isOutTrailing = p.pixels > p.maxScrollExtent;
-      if (isOutLeading) {
-        exceed = p.minScrollExtent - p.pixels;
-      } else if (isOutTrailing) {
-        exceed = p.pixels - p.maxScrollExtent;
-      }
+    // if (onPrisonStatusChanged == null) return;
+    double exceed = 0;
+    bool isOutLeading = p.pixels < p.minScrollExtent;
+    bool isOutTrailing = p.pixels > p.maxScrollExtent;
+    if (isOutLeading) {
+      exceed = p.minScrollExtent - p.pixels;
+    } else if (isOutTrailing) {
+      exceed = p.pixels - p.maxScrollExtent;
+    } else {
+      return;
+    }
 
-      bool isPrisonChange = false;
-      if (isPrisonBreak != true && (isOutLeading && exceed > leading || isOutTrailing && exceed > trailing)) {
-        isPrisonBreak = true;
-        isPrisonChange = true;
-      } else if (isPrisonBreak == true && (isOutLeading && exceed < leading || isOutTrailing && exceed < trailing)) {
-        isPrisonBreak = false;
-        isPrisonChange = true;
-      }
-      if (isPrisonChange) {
-        onPrisonStatusChanged?.call(this, p, isPrisonBreak!);
-      }
+    if (isOutOfPrison != true && (isOutLeading && exceed >= leading || isOutTrailing && exceed >= trailing)) {
+      isOutOfPrison = true;
+      __log__('onPrisonStatusChanged: come out prison');
+      onPrisonStatusChanged?.call(this, p, isOutOfPrison!);
+    } else if (isOutOfPrison == true && (isOutLeading && exceed < leading || isOutTrailing && exceed < trailing)) {
+      isOutOfPrison = false;
+      __log__('onPrisonStatusChanged: back to prison');
+      onPrisonStatusChanged?.call(this, p, isOutOfPrison!);
     }
   }
 
@@ -107,12 +110,14 @@ class GentlemanPhysics extends BouncingScrollPhysics {
 
   @override
   double applyPhysicsToUserOffset(ScrollMetrics position, double offset) {
-    // __print_ScrollMetrics__('UserOffset', position);
     if (_metrics != position) metrics = position;
-    setUserIsRelease = false;
+    if (_userDragged == false) {
+      _userDragged = true;
+      setUserIsRelease = false;
+    }
 
     double result = super.applyPhysicsToUserOffset(position, offset);
-    print('applyPhysicsToUserOffset>>> $offset, $result');
+    __log__('applyPhysicsToUserOffset>>> $offset, $result');
     return result;
   }
 
@@ -124,29 +129,34 @@ class GentlemanPhysics extends BouncingScrollPhysics {
 
   @override
   Simulation? createBallisticSimulation(ScrollMetrics position, double velocity) {
-    print('createBallisticSimulation>>> velocity $velocity, tolerance: ${this.tolerance}');
-    // __print_ScrollMetrics__('Ballistic', position);
+    // __log__('createBallisticSimulation>>> velocity $velocity, tolerance: ${this.tolerance}');
+    // __log_ScrollMetrics__('Ballistic', position);
     if (_metrics != position) metrics = position;
-    setUserIsRelease = true;
+    if (_userDragged == true) {
+      _userDragged = false;
+      setUserIsRelease = true;
+    }
 
     final Tolerance tolerance = this.tolerance;
     if (velocity.abs() >= tolerance.velocity || position.outOfRange) {
-      print('Return a bouncing ballistic simulation with leading: $leading, trailing: $trailing');
+      double extHead = isOutOfPrison == true ? leading : 0;
+      double exFoot = isOutOfPrison == true ? trailing : 0;
+      __log__('Ballistic:::: Return bouncing ballistic leading: $leading, trailing: $trailing, extHead: $extHead, exFoot: $exFoot');
       return BouncingScrollSimulation(
         spring: spring,
         velocity: velocity,
         position: position.pixels,
         tolerance: tolerance,
-        leadingExtent: position.minScrollExtent - (isPrisonBreak == true ? leading : 0),
-        trailingExtent: position.maxScrollExtent + (isPrisonBreak == true ? trailing : 0),
+        leadingExtent: position.minScrollExtent - extHead,
+        trailingExtent: position.maxScrollExtent + exFoot,
       );
     }
-    print('Return a null ballistic simulation');
+    __log__('Ballistic:::: Return null ballistic');
     return null;
   }
 
-  __print_ScrollMetrics__(String tag, ScrollMetrics position) {
-    print(''
+  __log_ScrollMetrics__(String tag, ScrollMetrics position) {
+    __log__(''
         '[ScrollMetrics] [$tag] '
         'hashCode: ${position.hashCode}, '
         'outOfRange: ${position.outOfRange}, '
@@ -156,5 +166,9 @@ class GentlemanPhysics extends BouncingScrollPhysics {
         'maxScrollExtent: ${position.maxScrollExtent}, '
         'pixels: ${position.pixels}, '
         '');
+  }
+
+  __log__(String message) {
+    print(message);
   }
 }

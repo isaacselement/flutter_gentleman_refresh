@@ -90,15 +90,17 @@ class _MyHomePageState extends State<MyHomePage> {
           physics.leading = extent;
           physics.trailing = extent;
 
+          print('extent is $extent');
+
           if (extent == 0) {
             return;
           }
 
-          CustomScrollView? scrollView = ElementsUtil.getWidgetOfType<CustomScrollView>(context);
+          // CustomScrollView? scrollView = ElementsUtil.getWidgetOfType<CustomScrollView>(context);
           // ScrollController? controller = scrollView?.controller;
           // print('CustomScrollView scrollView >>>>>> $scrollView');
           // print('CustomScrollView controller >>>>>> $controller');
-          print('CustomScrollView physics.position >>>>>> ${physics.metrics}, ${physics.position}');
+          // print('CustomScrollView physics.position >>>>>> ${physics.metrics}, ${physics.position}');
           // ScrollPosition? position = Scrollable.of(context)?.position;
           // position?.animateTo( offset, duration: const Duration(milliseconds: 500), curve: Curves.ease);
           // controller?.animateTo( offset, duration: const Duration(milliseconds: 500), curve: Curves.ease);

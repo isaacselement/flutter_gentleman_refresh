@@ -34,8 +34,8 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
       footerBtv.value = -60.0;
     };
     physics.onPositionChangedOutOfRange = (GentlemanPhysics physics, ScrollPosition position) {
-      print('>>>>>>>>>>>>>> outOfRangeCallback: $position');
-      print('>>>>>>>>>>>>>> outOfRangeCallback activity: ${position.activity}');
+      // print('>>>>>>>>>>>>>> outOfRangeCallback: $position');
+      // print('>>>>>>>>>>>>>> outOfRangeCallback activity: ${position.activity}');
       // print('>>>>>>>>>>>>>> outOfRangeCallback position.pixels: ${position.pixels}');
 
       bool isOnHeader = position.pixels < position.minScrollExtent;
@@ -50,16 +50,16 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
         footerBtv.value = min(0, v);
       }
     };
-    physics.onPrisonStatusChanged = (GentlemanPhysics physics, ScrollPosition position, bool isInPrison) {
+    physics.onPrisonStatusChanged = (GentlemanPhysics physics, ScrollPosition position, bool isOutOfPrison) {
       bool isOnHeader = position.pixels < position.minScrollExtent;
       if (isOnHeader) {
-        if (isInPrison) {
+        if (isOutOfPrison) {
           ElementsUtil.getStateOfType<IndicatorHeaderState>(context)?.animationController.forward();
         } else {
           ElementsUtil.getStateOfType<IndicatorHeaderState>(context)?.animationController.reverse();
         }
       } else {
-        if (isInPrison) {
+        if (isOutOfPrison) {
           ElementsUtil.getStateOfType<IndicatorFooterState>(context)?.animationController.forward();
         } else {
           ElementsUtil.getStateOfType<IndicatorFooterState>(context)?.animationController.reverse();
@@ -67,19 +67,19 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
       }
     };
     physics.onUserEventChanged = (GentlemanPhysics physics, ScrollPosition position, bool isRelease) {
-      if (isRelease && physics.isPrisonBreak == true) {
+      if (isRelease && physics.isOutOfPrison == true) {
         bool isOnHeader = position.pixels < position.minScrollExtent;
         () async {
           if (isOnHeader) {
             ElementsUtil.getStateOfType<IndicatorHeaderState>(context)?.animationController.repeat();
             await widget.onRefresh?.call();
             ElementsUtil.getStateOfType<IndicatorHeaderState>(context)?.animationController.stop();
-            position.animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.easeInOut);
+            position.animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.ease);
           } else {
             ElementsUtil.getStateOfType<IndicatorFooterState>(context)?.animationController.repeat();
             await widget.onLoad?.call();
             ElementsUtil.getStateOfType<IndicatorFooterState>(context)?.animationController.stop();
-            position.animateTo(position.maxScrollExtent, duration: const Duration(milliseconds: 250), curve: Curves.easeInOut);
+            position.animateTo(position.maxScrollExtent, duration: const Duration(milliseconds: 250), curve: Curves.ease);
           }
         }();
       }
