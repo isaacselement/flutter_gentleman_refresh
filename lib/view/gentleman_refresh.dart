@@ -9,15 +9,26 @@ import 'package:flutter_gentleman_refresh/elements_util.dart';
 import 'package:flutter_gentleman_refresh/view/indicator/indicator.dart';
 
 class GentlemanRefresh extends StatefulWidget {
-  GentlemanRefresh({Key? key, this.child, this.builder, this.onRefresh, this.onLoad}) : super(key: key) {
-    assert(child != null || builder != null, 'child and builder cannot be both null!');
-  }
+  GentlemanRefresh({
+    Key? key,
+    this.child,
+    this.onRefresh,
+    this.onLoad,
+  }) : super(key: key);
 
   Widget? child;
-  Widget Function(GentlemanRefreshState state)? builder;
 
+  /// Callback Refresh. Triggered on refresh. When null, disable refresh.
   FutureOr Function()? onRefresh;
+
+  /// Callback Load. Triggered on Load. When null, disable Load.
   FutureOr Function()? onLoad;
+
+  /// Header indicator.
+  Widget? header;
+
+  /// Footer indicator.
+  Widget? footer;
 
   @override
   State<GentlemanRefresh> createState() => GentlemanRefreshState();
@@ -28,54 +39,50 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
 
   @override
   void initState() {
-    physics = GentlemanPhysics(leading: 60, trailing: 60);
+    physics = GentlemanPhysics();
     physics.onRangeChanged = (GentlemanPhysics physics, ScrollPosition position) {
-      headerBtv.value = -60.0;
-      footerBtv.value = -60.0;
+      _headerPositionBtv?.value = _headerInitPosition;
+      _footerPositionBtv?.value = _footerInitPosition;
+      bool isOnHeader = position.pixels < (position.maxScrollExtent - position.minScrollExtent) / 2;
+      if (isOnHeader) {
+        getState<IndicatorLeadingState>(context)?.onRangeChanged(position);
+      } else {
+        getState<IndicatorTrailingState>(context)?.onRangeChanged(position);
+      }
     };
     physics.onPositionChangedOutOfRange = (GentlemanPhysics physics, ScrollPosition position) {
       bool isOnHeader = position.pixels < position.minScrollExtent;
-      double bound = isOnHeader ? position.minScrollExtent : position.maxScrollExtent;
-      double exceed = bound - position.pixels;
-
+      double exceed = (isOnHeader ? position.minScrollExtent : position.maxScrollExtent) - position.pixels;
       if (isOnHeader) {
-        double v = (-60.0) + exceed;
-        headerBtv.value = min(0, v);
+        _headerPositionBtv?.value = min(0, _headerInitPosition + exceed);
+        getState<IndicatorLeadingState>(context)?.onPositionChangedOutOfRange(position);
       } else {
-        double v = (-60.0) - exceed;
-        footerBtv.value = min(0, v);
+        _footerPositionBtv?.value = min(0, _footerInitPosition - exceed);
+        getState<IndicatorTrailingState>(context)?.onPositionChangedOutOfRange(position);
       }
     };
     physics.onPrisonStatusChanged = (GentlemanPhysics physics, ScrollPosition position, bool isOutOfPrison) {
       bool isOnHeader = position.pixels < position.minScrollExtent;
       if (isOnHeader) {
-        if (isOutOfPrison) {
-          ElementsUtil.getStateOfType<IndicatorHeaderState>(context)?.animationController.forward();
-        } else {
-          ElementsUtil.getStateOfType<IndicatorHeaderState>(context)?.animationController.reverse();
-        }
+        getState<IndicatorLeadingState>(context)?.onPrisonStatusChanged(position, isOutOfPrison);
       } else {
-        if (isOutOfPrison) {
-          ElementsUtil.getStateOfType<IndicatorFooterState>(context)?.animationController.forward();
-        } else {
-          ElementsUtil.getStateOfType<IndicatorFooterState>(context)?.animationController.reverse();
-        }
+        getState<IndicatorTrailingState>(context)?.onPrisonStatusChanged(position, isOutOfPrison);
       }
     };
     physics.onUserEventChanged = (GentlemanPhysics physics, ScrollPosition position, GentleEventType eventType) {
       if (eventType != GentleEventType.fingerDragging && physics.isOutOfPrison == true) {
-        print('>>>>>>>>>>>>>><<<<<<<<<< refresh!!!!');
         bool isOnHeader = position.pixels < position.minScrollExtent;
+        bool isAutoReleased = eventType == GentleEventType.autoReleased;
         () async {
           if (isOnHeader) {
-            ElementsUtil.getStateOfType<IndicatorHeaderState>(context)?.animationController.repeat();
+            getState<IndicatorLeadingState>(context)?.onFingerReleasedOutOfPrison(position, isAutoReleased);
             await widget.onRefresh?.call();
-            ElementsUtil.getStateOfType<IndicatorHeaderState>(context)?.animationController.stop();
+            await getState<IndicatorLeadingState>(context)?.onRefreshDone();
             position.animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.ease);
           } else {
-            ElementsUtil.getStateOfType<IndicatorFooterState>(context)?.animationController.repeat();
+            getState<IndicatorTrailingState>(context)?.onFingerReleasedOutOfPrison(position, isAutoReleased);
             await widget.onLoad?.call();
-            ElementsUtil.getStateOfType<IndicatorFooterState>(context)?.animationController.stop();
+            await getState<IndicatorTrailingState>(context)?.onLoadDone();
             position.animateTo(position.maxScrollExtent, duration: const Duration(milliseconds: 250), curve: Curves.ease);
           }
         }();
@@ -84,10 +91,19 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
     super.initState();
   }
 
+  static T? getState<T>(BuildContext? context) {
+    return (ElementsUtil.getElement(context, (e) => e is StatefulElement && e.state is T) as StatefulElement?)?.state as T?;
+  }
+
   @override
   void dispose() {
     super.dispose();
   }
+
+  double _headerInitPosition = 0;
+  double _footerInitPosition = 0;
+  Btv<double>? _headerPositionBtv;
+  Btv<double>? _footerPositionBtv;
 
   @override
   Widget build(BuildContext context) {
@@ -95,22 +111,34 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
     List<Widget> children = [];
     children.add(contentWidget);
 
-    Widget header = buildHeader();
-    Widget footer = buildFooter();
+    void appendOrInsert(Indicator? indicator) {
+      if (indicator == null) return;
+      if (indicator is! Widget) return;
+      Btv<double> extendBtv = (-indicator.extent).btv;
+      Widget btw;
+      if (indicator.isHeader()) {
+        _headerInitPosition = extendBtv.value;
+        _headerPositionBtv = extendBtv;
+        btw = Btw(builder: (context) {
+          return Positioned(top: extendBtv.value, left: 0, right: 0, child: indicator as Widget);
+        });
+      } else {
+        _footerInitPosition = extendBtv.value;
+        _footerPositionBtv = extendBtv;
+        btw = Btw(builder: (context) {
+          return Positioned(bottom: extendBtv.value, left: 0, right: 0, child: indicator as Widget);
+        });
+      }
+      children.insert(indicator.isBehind() ? 0 : children.length - 1, btw);
+    }
 
-    children.insert(0, footer);
-    children.insert(0, header);
+    widget.footer ??= IndicatorFooter();
+    widget.header ??= IndicatorHeader();
+    appendOrInsert(widget.footer is Indicator ? widget.footer as Indicator : null);
+    appendOrInsert(widget.header is Indicator ? widget.header as Indicator : null);
 
-    // Indicator header = buildHeader();
-    // Indicator footer = buildFooter();
-    //
-    // void appendOrInsert(Indicator indicator) {
-    //   int index = indicator.zPosition == IndicatorZPosition.above ? children.length : 0;
-    //   children.insert(index, indicator as Widget);
-    // }
-    //
-    // appendOrInsert(footer);
-    // appendOrInsert(header);
+    physics.leading = _headerInitPosition.abs();
+    physics.trailing = _footerInitPosition.abs();
 
     return Stack(
       fit: StackFit.loose,
@@ -121,34 +149,7 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
   Widget buildContent() {
     return ScrollConfiguration(
       behavior: GentlemanBehavior(physics: physics),
-      child: widget.builder?.call(this) ?? widget.child ?? const Offstage(offstage: true),
+      child: widget.child ?? const Offstage(offstage: true),
     );
-  }
-
-  Btv<double> headerBtv = (-60.0).btv;
-  Btv<double> footerBtv = (-60.0).btv;
-
-  Widget buildHeader() {
-    return Btw(builder: (context) {
-      return Positioned(
-        top: headerBtv.value,
-        left: 0,
-        right: 0,
-        child: IndicatorHeader(),
-      );
-    });
-    return IndicatorHeader();
-  }
-
-  Widget buildFooter() {
-    return Btw(builder: (context) {
-      return Positioned(
-        bottom: footerBtv.value,
-        left: 0,
-        right: 0,
-        child: IndicatorFooter(),
-      );
-    });
-    return IndicatorFooter();
   }
 }

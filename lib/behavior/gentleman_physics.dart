@@ -28,7 +28,6 @@ class GentlemanPhysics extends BouncingScrollPhysics {
   set setUserEvent(GentleEventType v) {
     if (userEventType != v) {
       userEventType = v;
-      __log__('onUserEventChanged: $v');
       onUserEventChanged?.call(this, position!, v);
     }
   }
@@ -58,7 +57,6 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     // range changed
     if (isOutOfRang != outOfRange) {
       isOutOfRang = outOfRange;
-      __log__('onRangeChanged: $outOfRange');
       onRangeChanged?.call(this, p);
     }
 
@@ -73,7 +71,6 @@ class GentlemanPhysics extends BouncingScrollPhysics {
 
     // position changed on out of range
     if (onPositionChangedOutOfRange != null) {
-      // __log__('onPositionChangedOutOfRange');
       onPositionChangedOutOfRange?.call(this, p);
     }
 
@@ -82,11 +79,12 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     double exceed = 0;
     bool isOutLeading = p.pixels < p.minScrollExtent;
     bool isOutTrailing = p.pixels > p.maxScrollExtent;
-    if (isOutLeading) {
+    if (isOutLeading && leading > 0) {
       exceed = p.minScrollExtent - p.pixels;
-    } else if (isOutTrailing) {
+    } else if (isOutTrailing && trailing > 0) {
       exceed = p.pixels - p.maxScrollExtent;
-    } else {
+    }
+    if (exceed == 0) {
       return;
     }
 
@@ -120,7 +118,6 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     }
 
     double result = super.applyPhysicsToUserOffset(position, offset);
-    __log__('applyPhysicsToUserOffset>>> $offset, $result');
     return result;
   }
 
@@ -132,8 +129,6 @@ class GentlemanPhysics extends BouncingScrollPhysics {
 
   @override
   Simulation? createBallisticSimulation(ScrollMetrics position, double velocity) {
-    // __log__('createBallisticSimulation>>> velocity $velocity, tolerance: ${this.tolerance}');
-    // __log_ScrollMetrics__('Ballistic', position);
     if (_metrics != position) metrics = position;
     if (dragType != null) {
       GentleEventType event = dragType == GentleDragType.finger ? GentleEventType.fingerReleased : GentleEventType.autoReleased;
@@ -160,21 +155,11 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     return null;
   }
 
-  __log_ScrollMetrics__(String tag, ScrollMetrics position) {
-    __log__(''
-        '[ScrollMetrics] [$tag] '
-        'hashCode: ${position.hashCode}, '
-        'outOfRange: ${position.outOfRange}, '
-        'viewportDimension: ${position.viewportDimension}, '
-        'axisDirection: ${position.axisDirection}, '
-        'minScrollExtent: ${position.minScrollExtent}, '
-        'maxScrollExtent: ${position.maxScrollExtent}, '
-        'pixels: ${position.pixels}, '
-        '');
-  }
-
   __log__(String message) {
-    print(message);
+    assert(() {
+      print(message);
+      return true;
+    }());
   }
 }
 
