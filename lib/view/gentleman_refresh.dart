@@ -70,20 +70,30 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
       }
     };
     physics.onUserEventChanged = (GentlemanPhysics physics, ScrollPosition position, GentleEventType eventType) {
-      if (eventType != GentleEventType.fingerDragging && physics.isOutOfPrison == true) {
+      if (eventType != GentleEventType.fingerDragStarted && physics.isOutOfPrison == true) {
         bool isOnHeader = position.pixels < position.minScrollExtent;
         bool isAutoReleased = eventType == GentleEventType.autoReleased;
         () async {
           if (isOnHeader) {
             getState<IndicatorLeadingState>(context)?.onFingerReleasedOutOfPrison(position, isAutoReleased);
             await widget.onRefresh?.call();
-            await getState<IndicatorLeadingState>(context)?.onRefreshDone();
-            position.animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.ease);
+            if (await getState<IndicatorLeadingState>(context)?.onRefreshDone() == true) {
+              return;
+            }
+
+            if (_headerPositionBtv != null && _headerPositionBtv!.value != _headerInitPosition) {
+              position.animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.ease);
+            }
           } else {
             getState<IndicatorTrailingState>(context)?.onFingerReleasedOutOfPrison(position, isAutoReleased);
             await widget.onLoad?.call();
-            await getState<IndicatorTrailingState>(context)?.onLoadDone();
-            position.animateTo(position.maxScrollExtent, duration: const Duration(milliseconds: 250), curve: Curves.ease);
+            if (await getState<IndicatorTrailingState>(context)?.onLoadDone() == true) {
+              return;
+            }
+
+            if (_footerPositionBtv != null && _footerPositionBtv!.value != _footerInitPosition) {
+              position.animateTo(position.maxScrollExtent, duration: const Duration(milliseconds: 250), curve: Curves.ease);
+            }
           }
         }();
       }

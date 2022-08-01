@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_gentleman_refresh/behavior/gentleman_physics.dart';
 
 enum IndicatorZPosition {
   above,
@@ -41,13 +40,13 @@ abstract class IndicatorState<T extends StatefulWidget> extends State<T> {
 
 abstract class IndicatorLeadingState<T extends StatefulWidget> extends IndicatorState<T> {
 
-  Future<void> onRefreshDone();
+  Future<bool> onRefreshDone();
 
 }
 
 abstract class IndicatorTrailingState<T extends StatefulWidget> extends IndicatorState<T> {
 
-  Future<void> onLoadDone();
+  Future<bool> onLoadDone();
 
 }
 
@@ -110,8 +109,11 @@ class IndicatorHeaderState extends IndicatorLeadingState<IndicatorHeader> with S
   }
 
   @override
-  Future<void> onRefreshDone() async {
+  Future<bool> onRefreshDone() async {
+    animationController.reset();
     animationController.stop();
+    await Future.delayed(const Duration(milliseconds: 1000));
+    return false;
   }
 
 }
@@ -173,7 +175,10 @@ class IndicatorFooterState extends IndicatorTrailingState<IndicatorFooter> with 
   }
 
   @override
-  Future<void> onLoadDone() async {
+  Future<bool> onLoadDone() async {
+    animationController.reset();
     animationController.stop();
+    await Future.delayed(const Duration(milliseconds: 1000));
+    return false;
   }
 }

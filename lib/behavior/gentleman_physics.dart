@@ -114,7 +114,7 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     if (_metrics != position) metrics = position;
     if (dragType == null) {
       dragType = GentleDragType.finger;
-      setUserEvent = GentleEventType.fingerDragging;
+      setUserEvent = GentleEventType.fingerDragStarted;
     }
 
     double result = super.applyPhysicsToUserOffset(position, offset);
@@ -124,6 +124,7 @@ class GentlemanPhysics extends BouncingScrollPhysics {
   @override
   double applyBoundaryConditions(ScrollMetrics position, double value) {
     double result = super.applyBoundaryConditions(position, value);
+    // __log__('applyBoundaryConditions: $result');
     return result;
   }
 
@@ -165,4 +166,4 @@ class GentlemanPhysics extends BouncingScrollPhysics {
 
 enum GentleDragType { finger, auto }
 
-enum GentleEventType { fingerDragging, fingerReleased, autoReleased }
+enum GentleEventType { fingerDragStarted, fingerReleased, autoReleased }
