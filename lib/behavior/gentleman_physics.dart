@@ -134,7 +134,6 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     if (dragType != null) {
       GentleEventType event = dragType == GentleDragType.finger ? GentleEventType.fingerReleased : GentleEventType.autoReleased;
       setUserEvent = event;
-
       dragType = null;
     }
 
