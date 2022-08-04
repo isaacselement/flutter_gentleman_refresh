@@ -6,6 +6,7 @@ import 'package:flutter_gentleman_refresh/behavior/gentleman_behavior.dart';
 import 'package:flutter_gentleman_refresh/behavior/gentleman_physics.dart';
 import 'package:flutter_gentleman_refresh/brother.dart';
 import 'package:flutter_gentleman_refresh/elements_util.dart';
+import 'package:flutter_gentleman_refresh/view/indicator/classic/classic_indicator.dart';
 import 'package:flutter_gentleman_refresh/view/indicator/indicator.dart';
 
 class GentlemanRefresh extends StatefulWidget {
