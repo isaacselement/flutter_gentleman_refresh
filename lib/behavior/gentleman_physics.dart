@@ -9,8 +9,8 @@ class GentlemanPhysics extends BouncingScrollPhysics {
 
   /// positions change status and callbacks. outOfRange indicate that position exceed the min/maxScrollExtent
   bool? isOutOfRang;
-  void Function(GentlemanPhysics physics, ScrollPosition position)? onRangeChanged;
   void Function(GentlemanPhysics physics, ScrollPosition position)? onPositionChanged;
+  void Function(GentlemanPhysics physics, ScrollPosition position)? onRangeStateChanged;
   void Function(GentlemanPhysics physics, ScrollPosition position)? onPositionChangedOutOfRange;
 
   /// onPositionChangedOutOfRange & onPrisonStatusChanged:
@@ -18,7 +18,7 @@ class GentlemanPhysics extends BouncingScrollPhysics {
 
   /// indicate that can be refreshed when release your finger (out of range an exceed the leading/trailing offset)
   bool? isOutOfPrison;
-  void Function(GentlemanPhysics physics, ScrollPosition position, bool isOutOfPrison)? onPrisonStatusChanged;
+  void Function(GentlemanPhysics physics, ScrollPosition position, bool isOutOfPrison)? onPrisonStateChanged;
 
   /// user drag or release event. isReleasedFinger = true means that finger up event, else finger down event
   GentleDragType? dragType;
@@ -57,7 +57,7 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     // range changed
     if (isOutOfRang != outOfRange) {
       isOutOfRang = outOfRange;
-      onRangeChanged?.call(this, p);
+      onRangeStateChanged?.call(this, p);
     }
 
     if (!outOfRange) {
@@ -91,11 +91,11 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     if (isOutOfPrison != true && (isOutLeading && exceed >= leading || isOutTrailing && exceed >= trailing)) {
       isOutOfPrison = true;
       __log__('onPrisonStatusChanged: come out prison');
-      onPrisonStatusChanged?.call(this, p, isOutOfPrison!);
+      onPrisonStateChanged?.call(this, p, isOutOfPrison!);
     } else if (isOutOfPrison == true && (isOutLeading && exceed < leading || isOutTrailing && exceed < trailing)) {
       isOutOfPrison = false;
       __log__('onPrisonStatusChanged: back to prison');
-      onPrisonStatusChanged?.call(this, p, isOutOfPrison!);
+      onPrisonStateChanged?.call(this, p, isOutOfPrison!);
     }
   }
 
