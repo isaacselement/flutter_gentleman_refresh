@@ -42,6 +42,12 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> with Single
   }
 
   @override
+  void didUpdateWidget(covariant ClassicIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    /// TODO ... when refreshing, parent setState call result in blank ~~~
+  }
+
+  @override
   Widget build(BuildContext context) {
     // icon
     Widget iconWidget;
@@ -75,9 +81,9 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> with Single
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(mTitle ?? '', style: Theme.of(context).textTheme.titleMedium),
+        Text(mTitle ?? '----', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
-        Text(mSubTitle ?? '', style: Theme.of(context).textTheme.caption),
+        Text(mSubTitle ?? '++++', style: Theme.of(context).textTheme.caption),
       ],
     );
 

@@ -49,12 +49,10 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
       double exceed = (isOnHeader ? position.minScrollExtent : position.maxScrollExtent) - position.pixels;
       if (isOnHeader) {
         _headerPositionBtv?.value = min(0, _headerInitPosition + exceed);
-        IndicatorState? s = getState<IndicatorState>(context, (e) => (e.widget as Indicator).type == IndicatorType.header);
-        s?.onPositionChangedOutOfRange(position);
+        getHeaderState(context)?.onPositionChangedOutOfRange(position);
       } else {
         _footerPositionBtv?.value = min(0, _footerInitPosition - exceed);
-        IndicatorState? s = getState<IndicatorState>(context, (e) => (e.widget as Indicator).type == IndicatorType.footer);
-        s?.onPositionChangedOutOfRange(position);
+        getFooterState(context)?.onPositionChangedOutOfRange(position);
       }
     };
 
@@ -63,22 +61,18 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
       _footerPositionBtv?.value = _footerInitPosition;
       bool isOnHeader = position.pixels < (position.maxScrollExtent - position.minScrollExtent) / 2;
       if (isOnHeader) {
-        IndicatorState? s = getState<IndicatorState>(context, (e) => (e.widget as Indicator).type == IndicatorType.header);
-        s?.onRangeStateChanged(position);
+        getHeaderState(context)?.onRangeStateChanged(position);
       } else {
-        IndicatorState? s = getState<IndicatorState>(context, (e) => (e.widget as Indicator).type == IndicatorType.footer);
-        s?.onRangeStateChanged(position);
+        getFooterState(context)?.onRangeStateChanged(position);
       }
     };
 
     physics.onPrisonStateChanged = (GentlemanPhysics physics, ScrollPosition position, bool isOutOfPrison) {
       bool isOnHeader = position.pixels < position.minScrollExtent;
       if (isOnHeader) {
-        IndicatorState? s = getState<IndicatorState>(context, (e) => (e.widget as Indicator).type == IndicatorType.header);
-        s?.onPrisonStateChanged(position, isOutOfPrison);
+        getHeaderState(context)?.onPrisonStateChanged(position, isOutOfPrison);
       } else {
-        IndicatorState? s = getState<IndicatorState>(context, (e) => (e.widget as Indicator).type == IndicatorType.footer);
-        s?.onPrisonStateChanged(position, isOutOfPrison);
+        getFooterState(context)?.onPrisonStateChanged(position, isOutOfPrison);
       }
     };
 
@@ -88,8 +82,7 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
         bool isAutoReleased = eventType == GentleEventType.autoReleased;
         () async {
           if (isOnHeader) {
-            IndicatorState? s = getState<IndicatorState>(context, (e) => (e.widget as Indicator).type == IndicatorType.header);
-            s?.onFingerReleasedOutOfPrison(position, isAutoReleased);
+            getHeaderState(context)?.onFingerReleasedOutOfPrison(position, isAutoReleased);
 
             if (isCallingOnRefresh) {
               return;
@@ -101,7 +94,7 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
             }();
             isCallingOnRefresh = false;
 
-            if (await s?.onCallerRefreshDone() == true) {
+            if (await getHeaderState(context)?.onCallerRefreshDone() == true) {
               return;
             }
 
@@ -109,8 +102,7 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
               position.animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.ease);
             }
           } else {
-            IndicatorState? s = getState<IndicatorState>(context, (e) => (e.widget as Indicator).type == IndicatorType.footer);
-            s?.onFingerReleasedOutOfPrison(position, isAutoReleased);
+            getFooterState(context)?.onFingerReleasedOutOfPrison(position, isAutoReleased);
 
             if (isCallingOnLoad) {
               return;
@@ -122,7 +114,7 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
             }();
             isCallingOnLoad = false;
 
-            if (await s?.onCallerLoadDone() == true) {
+            if (await getHeaderState(context)?.onCallerLoadDone() == true) {
               return;
             }
 
@@ -134,6 +126,14 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
       }
     };
     super.initState();
+  }
+
+  static IndicatorState? getHeaderState(BuildContext context) {
+    return getState<IndicatorState>(context, (e) => (e.widget as Indicator).type == IndicatorType.header);
+  }
+
+  static IndicatorState? getFooterState(BuildContext context) {
+    return getState<IndicatorState>(context, (e) => (e.widget as Indicator).type == IndicatorType.footer);
   }
 
   static T? getState<T>(BuildContext? context, bool Function(T e) test) {
@@ -153,8 +153,11 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
 
   @override
   Widget build(BuildContext context) {
-    Widget contentWidget = buildContent();
     List<Widget> children = [];
+    Widget contentWidget = ScrollConfiguration(
+      behavior: GentlemanBehavior(physics: physics),
+      child: widget.child ?? const Offstage(offstage: true),
+    );
     children.add(contentWidget);
 
     void appendOrInsert(Indicator? indicator) {
@@ -189,13 +192,6 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
     return Stack(
       fit: StackFit.loose,
       children: children,
-    );
-  }
-
-  Widget buildContent() {
-    return ScrollConfiguration(
-      behavior: GentlemanBehavior(physics: physics),
-      child: widget.child ?? const Offstage(offstage: true),
     );
   }
 }

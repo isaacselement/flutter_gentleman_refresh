@@ -71,7 +71,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                     );
                   },
-                  childCount: 50 * 2,
+                  childCount: 30 * 2,
                 ),
               ),
             ],
@@ -80,6 +80,9 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
+          setState((){});
+          return;
+
           extent = extent == 60 ? 0 : 60;
           GentlemanRefreshState? refresher = ElementsUtil.getStateOfType<GentlemanRefreshState>(context);
           if (refresher == null) {

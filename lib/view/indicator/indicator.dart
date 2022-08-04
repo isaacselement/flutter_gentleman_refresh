@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 
-enum IndicatorType { header, footer }
+enum IndicatorType {
+  header,
+  footer,
+}
 
-enum IndicatorZPosition { above, behind }
+enum IndicatorZPosition {
+  above,
+  behind,
+}
 
 enum IndicatorStatus {
   /// dragging out of range or initialization
@@ -27,7 +33,7 @@ mixin Indicator {
     return type == IndicatorType.header;
   }
 
-  IndicatorZPosition zPosition = IndicatorZPosition.behind;
+  IndicatorZPosition zPosition = IndicatorZPosition.above;
 
   bool isBehind() {
     return zPosition == IndicatorZPosition.behind;
