@@ -1,13 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gentleman_refresh/behavior/gentleman_physics.dart';
 
 enum IndicatorType {
   header,
   footer,
 }
 
-enum IndicatorZPosition {
+enum IndicatorZIndex {
   above,
   behind,
+}
+
+mixin Indicator on Widget {
+  double extent = 60.0;
+
+  bool clamping = false;
+
+  IndicatorType type = IndicatorType.header;
+
+  bool isHeader() {
+    return type == IndicatorType.header;
+  }
+
+  IndicatorZIndex zIndex = IndicatorZIndex.above;
+
+  bool isBehind() {
+    return zIndex == IndicatorZIndex.behind;
+  }
 }
 
 enum IndicatorStatus {
@@ -24,38 +43,22 @@ enum IndicatorStatus {
   processed,
 }
 
-mixin Indicator {
-  double extent = 60.0;
-
-  IndicatorType type = IndicatorType.header;
-
-  bool isHeader() {
-    return type == IndicatorType.header;
-  }
-
-  IndicatorZPosition zPosition = IndicatorZPosition.above;
-
-  bool isBehind() {
-    return zPosition == IndicatorZPosition.behind;
-  }
-}
-
 abstract class IndicatorState<T extends StatefulWidget> extends State<T> {
   IndicatorStatus indicatorStatus = IndicatorStatus.initial;
 
   bool isIndicatorStatusLocked = false;
 
   /// outOfRange(true or false) status change
-  void onRangeStateChanged(ScrollPosition position);
+  void onRangeStateChanged(GentlemanPhysics physics);
 
   /// position changing when outOfRange is true
-  void onPositionChangedOutOfRange(ScrollPosition position);
+  void onPositionChangedOutOfRange(GentlemanPhysics physics);
 
   /// outOfPrison(true or false) status change
-  void onPrisonStateChanged(ScrollPosition position, bool isOutOfPrison);
+  void onPrisonStateChanged(GentlemanPhysics physics, bool isOutOfPrison);
 
   /// finger released when outOfPrison is true
-  void onFingerReleasedOutOfPrison(ScrollPosition position, bool isAutoRelease);
+  void onFingerReleasedOutOfPrison(GentlemanPhysics physics, bool isAutoRelease);
 
   /// when caller's refresh done, ask for more time or do some extra effect here
   Future<bool> onCallerRefreshDone();

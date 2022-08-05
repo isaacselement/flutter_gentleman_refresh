@@ -32,6 +32,10 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
+class BBBBB extends ScrollPositionWithSingleContext {
+  BBBBB({required super.physics, required super.context});
+}
+
 class _MyHomePageState extends State<MyHomePage> {
   double extent = 60;
 
@@ -50,37 +54,12 @@ class _MyHomePageState extends State<MyHomePage> {
           onLoad: () async {
             await Future.delayed(const Duration(milliseconds: 3000));
           },
-          child: CustomScrollView(
-            slivers: [
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    if (index % 2 == 1) {
-                      return const SizedBox(height: 1, child: ColoredBox(color: Colors.transparent));
-                    }
-                    return SizedBox(
-                      height: 50,
-                      child: Container(
-                        color: Colors.white,
-                        alignment: Alignment.centerLeft,
-                        padding: const EdgeInsets.only(left: 12),
-                        child: Text(
-                          '${index ~/ 2}',
-                          textAlign: TextAlign.left,
-                        ),
-                      ),
-                    );
-                  },
-                  childCount: 30 * 2,
-                ),
-              ),
-            ],
-          ),
+          child: getScrollView(),
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          setState((){});
+          setState(() {});
           return;
 
           extent = extent == 60 ? 0 : 60;
@@ -127,6 +106,35 @@ class _MyHomePageState extends State<MyHomePage> {
         tooltip: 'Increment',
         child: const Icon(Icons.add),
       ),
+    );
+  }
+
+  Widget getScrollView() {
+    return CustomScrollView(
+      slivers: [
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              if (index % 2 == 1) {
+                return const SizedBox(height: 10, child: ColoredBox(color: Colors.transparent));
+              }
+              return SizedBox(
+                height: 50,
+                child: Container(
+                  color: Colors.white.withOpacity(0.5),
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.only(left: 12),
+                  child: Text(
+                    '${index ~/ 2}',
+                    textAlign: TextAlign.left,
+                  ),
+                ),
+              );
+            },
+            childCount: 30 * 2,
+          ),
+        ),
+      ],
     );
   }
 }

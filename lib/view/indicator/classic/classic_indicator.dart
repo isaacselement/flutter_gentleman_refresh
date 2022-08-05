@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_gentleman_refresh/behavior/gentleman_physics.dart';
 import 'package:flutter_gentleman_refresh/view/indicator/indicator.dart';
 
 class ClassicIndicator extends StatefulWidget with Indicator {
@@ -115,6 +116,7 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> with Single
     return Container(
       height: widget.extent,
       alignment: Alignment.center,
+      color: Colors.orange,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -135,14 +137,14 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> with Single
   /// Override methods of IndicatorState
 
   @override
-  void onRangeStateChanged(ScrollPosition position) {
+  void onRangeStateChanged(GentlemanPhysics physics) {
     if (isIndicatorStatusLocked) return;
     indicatorStatus = IndicatorStatus.initial;
     setState(() {});
   }
 
   @override
-  void onPrisonStateChanged(ScrollPosition position, bool isOutOfPrison) {
+  void onPrisonStateChanged(GentlemanPhysics physics, bool isOutOfPrison) {
     if (isIndicatorStatusLocked) return;
     if (isOutOfPrison) {
       indicatorStatus = IndicatorStatus.ready;
@@ -155,7 +157,7 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> with Single
   }
 
   @override
-  void onFingerReleasedOutOfPrison(ScrollPosition position, bool isAutoRelease) {
+  void onFingerReleasedOutOfPrison(GentlemanPhysics physics, bool isAutoRelease) {
     if (isIndicatorStatusLocked) return;
     isIndicatorStatusLocked = true;
     indicatorStatus = IndicatorStatus.processing;
@@ -163,7 +165,7 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> with Single
   }
 
   @override
-  void onPositionChangedOutOfRange(ScrollPosition position) {
+  void onPositionChangedOutOfRange(GentlemanPhysics physics) {
     // TODO: implement onPositionChangedOutOfRange
   }
 
