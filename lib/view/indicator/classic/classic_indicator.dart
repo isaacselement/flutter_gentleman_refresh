@@ -6,7 +6,7 @@ class ClassicIndicator extends StatefulWidget with Indicator {
   ClassicIndicator({
     Key? key,
     this.titleMap,
-    this.subTitle,
+    this.subTitleMap,
     IndicatorType type = IndicatorType.header,
   }) : super(key: key) {
     this.type = type;
@@ -16,11 +16,23 @@ class ClassicIndicator extends StatefulWidget with Indicator {
       IndicatorStatus.processing.toString(): isHeader() ? 'Refreshing' : 'Loading',
       IndicatorStatus.processed.toString(): isHeader() ? 'Completed' : 'Succeeded',
     };
-    subTitle ??= 'Last updated at %S';
+    String subTitleTemplate = 'Last updated at %S';
+    subTitleMap ??= {
+      IndicatorStatus.initial.toString(): subTitleTemplate,
+      IndicatorStatus.ready.toString(): subTitleTemplate,
+      IndicatorStatus.processing.toString(): subTitleTemplate,
+      IndicatorStatus.processed.toString(): subTitleTemplate,
+    };
+    subTitleMap?[keyLastUpdateAt] ??= DateTime.now();
+    subTitleMap?[keyLastUpdateAtFn] ??= (DateTime d) => (d.toString().split(' ')[1]).split('.')[0];
   }
 
-  Map<String, String>? titleMap;
-  String? subTitle;
+  Map<String, dynamic>? titleMap;
+  Map<String, dynamic>? subTitleMap;
+
+  static const String keyLastUpdateAtHolder = '%S';
+  static const String keyLastUpdateAt = 'kLastUpdateAt';
+  static const String keyLastUpdateAtFn = 'kLastUpdateToString';
 
   @override
   State<ClassicIndicator> createState() => ClassicIndicatorState();
@@ -44,12 +56,13 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> with Single
   @override
   void didUpdateWidget(covariant ClassicIndicator oldWidget) {
     super.didUpdateWidget(oldWidget);
-    /// TODO ... when refreshing, parent setState call result in blank ~~~
+
+    /// TODO ... when refreshing, parent setState called result in blank ~~~
   }
 
   @override
   Widget build(BuildContext context) {
-    // icon
+    /// Icon widget
     Widget iconWidget;
     IconThemeData theme = IconTheme.of(context); // Theme.of(context).iconTheme size is null.
     if (indicatorStatus == IndicatorStatus.processing) {
@@ -73,17 +86,29 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> with Single
       );
     }
 
-    // title
+    /// Title widget
+    String? getSubTitle(String statusKey) {
+      Map? map = widget.subTitleMap;
+      String? sub = map?[statusKey];
+      if (sub?.contains(ClassicIndicator.keyLastUpdateAtHolder) == true) {
+        DateTime dateTime = map?[ClassicIndicator.keyLastUpdateAt] ?? DateTime.now();
+        Function(DateTime d)? stringFn = (map?[ClassicIndicator.keyLastUpdateAtFn]) as Function(DateTime d)?;
+        sub = sub?.replaceFirst(ClassicIndicator.keyLastUpdateAtHolder, stringFn?.call(dateTime) ?? '');
+      }
+      return sub;
+    }
+
     Widget titleWidget;
-    String? mSubTitle = widget.subTitle;
-    String? mTitle = widget.titleMap?[indicatorStatus.toString()];
+    String keyOfStatus = indicatorStatus.toString();
+    String? mTitle = widget.titleMap?[keyOfStatus];
+    String? mSubTitle = getSubTitle(keyOfStatus);
     titleWidget = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(mTitle ?? '----', style: Theme.of(context).textTheme.titleMedium),
+        Text(mTitle ?? '', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
-        Text(mSubTitle ?? '++++', style: Theme.of(context).textTheme.caption),
+        Text(mSubTitle ?? '', style: Theme.of(context).textTheme.caption),
       ],
     );
 
@@ -106,6 +131,8 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> with Single
       ),
     );
   }
+
+  /// Override methods of IndicatorState
 
   @override
   void onRangeStateChanged(ScrollPosition position) {
@@ -144,6 +171,7 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> with Single
   Future<bool> onCallerRefreshDone() async {
     isIndicatorStatusLocked = false;
     indicatorStatus = IndicatorStatus.processed;
+    widget.subTitleMap?[ClassicIndicator.keyLastUpdateAt] = DateTime.now();
     setState(() {});
     await Future.delayed(const Duration(milliseconds: 1000));
     return indicatorStatus != IndicatorStatus.processed;

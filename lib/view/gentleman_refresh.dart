@@ -94,6 +94,9 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
             }();
             isCallingOnRefresh = false;
 
+            if (!mounted) {
+              return;
+            }
             if (await getHeaderState(context)?.onCallerRefreshDone() == true) {
               return;
             }
@@ -114,6 +117,9 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
             }();
             isCallingOnLoad = false;
 
+            if (!mounted) {
+              return;
+            }
             if (await getHeaderState(context)?.onCallerLoadDone() == true) {
               return;
             }
