@@ -32,10 +32,6 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class BBBBB extends ScrollPositionWithSingleContext {
-  BBBBB({required super.physics, required super.context});
-}
-
 class _MyHomePageState extends State<MyHomePage> {
   double extent = 60;
 
@@ -49,10 +45,10 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Center(
         child: GentlemanRefresh(
           onRefresh: () async {
-            await Future.delayed(const Duration(milliseconds: 3000));
+            await Future.delayed(const Duration(milliseconds: 2000));
           },
           onLoad: () async {
-            await Future.delayed(const Duration(milliseconds: 3000));
+            await Future.delayed(const Duration(milliseconds: 2000));
           },
           child: getScrollView(),
         ),

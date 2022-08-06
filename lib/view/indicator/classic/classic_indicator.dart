@@ -1,6 +1,8 @@
 import 'dart:math' as math;
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_gentleman_refresh/behavior/gentleman_physics.dart';
+import 'package:flutter_gentleman_refresh/view/gentleman_refresh.dart';
 import 'package:flutter_gentleman_refresh/view/indicator/indicator.dart';
 
 class ClassicIndicator extends StatefulWidget with Indicator {
@@ -39,7 +41,7 @@ class ClassicIndicator extends StatefulWidget with Indicator {
   State<ClassicIndicator> createState() => ClassicIndicatorState();
 }
 
-class ClassicIndicatorState extends IndicatorState<ClassicIndicator> with SingleTickerProviderStateMixin {
+class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
   late AnimationController animationController;
 
   @override
@@ -137,14 +139,24 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> with Single
   /// Override methods of IndicatorState
 
   @override
-  void onRangeStateChanged(GentlemanPhysics physics) {
+  void onRangeStateChanged(GentlemanRefreshState state) {
     if (isIndicatorStatusLocked) return;
+    GentlemanPhysics physics = state.physics;
     indicatorStatus = IndicatorStatus.initial;
     setState(() {});
+
+    ScrollPosition p = physics.position!;
+    bool isHeader = (p.pixels - p.minScrollExtent).abs() < (p.pixels - p.maxScrollExtent).abs();
+    if (isHeader && physics.trailClamping) {
+      return;
+    } else if (!isHeader && physics.leadClamping) {
+      return;
+    }
+    widget.positionNotifier.value = -widget.extent;
   }
 
   @override
-  void onPrisonStateChanged(GentlemanPhysics physics, bool isOutOfPrison) {
+  void onPrisonStateChanged(GentlemanRefreshState state, bool isOutOfPrison) {
     if (isIndicatorStatusLocked) return;
     if (isOutOfPrison) {
       indicatorStatus = IndicatorStatus.ready;
@@ -157,7 +169,7 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> with Single
   }
 
   @override
-  void onFingerReleasedOutOfPrison(GentlemanPhysics physics, bool isAutoRelease) {
+  void onFingerReleasedOutOfPrison(GentlemanRefreshState state, bool isAutoRelease) {
     if (isIndicatorStatusLocked) return;
     isIndicatorStatusLocked = true;
     indicatorStatus = IndicatorStatus.processing;
@@ -165,22 +177,52 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> with Single
   }
 
   @override
-  void onPositionChangedOutOfRange(GentlemanPhysics physics) {
-    // TODO: implement onPositionChangedOutOfRange
+  void onPositionChangedOutOfRange(GentlemanRefreshState state) {
+    GentlemanPhysics physics = state.physics;
+    GentleClampPosition? position = physics.clampingPosition;
+    double pixels = position != null ? position.pixels : physics.position!.pixels;
+    double minScrollExtent = position != null ? position.minScrollExtent : physics.position!.minScrollExtent;
+    double maxScrollExtent = position != null ? position.maxScrollExtent : physics.position!.maxScrollExtent;
+
+    bool isHeader = pixels < minScrollExtent;
+    double exceed = (isHeader ? minScrollExtent : maxScrollExtent) - pixels;
+
+
+    widget.positionNotifier.value = min(0, isHeader ? -widget.extent + exceed : -widget.extent - exceed);
   }
 
   @override
-  Future<bool> onCallerRefreshDone() async {
+  void onCallerRefreshDone(GentlemanRefreshState state) async {
     isIndicatorStatusLocked = false;
+    GentlemanPhysics physics = state.physics;
     indicatorStatus = IndicatorStatus.processed;
     widget.subTitleMap?[ClassicIndicator.keyLastUpdateAt] = DateTime.now();
     setState(() {});
-    await Future.delayed(const Duration(milliseconds: 1000));
-    return indicatorStatus != IndicatorStatus.processed;
+    await Future.delayed(const Duration(milliseconds: 1500));
+    if (indicatorStatus == IndicatorStatus.processed) {
+      ScrollPosition p = physics.position!;
+      bool isHeader = (p.pixels - p.minScrollExtent).abs() < (p.pixels - p.maxScrollExtent).abs();
+      if (widget.clamping) {
+        AnimationController ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 250));
+        Animation animation = CurveTween(curve: Curves.easeInOut).animate(ctrl);
+        animation.addListener(() {
+          widget.positionNotifier.value = -widget.extent * animation.value;
+        });
+        ctrl.forward().then((value){
+          ctrl.dispose();
+        });
+      } else {
+        p.animateTo(
+          isHeader ? p.minScrollExtent : p.maxScrollExtent,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.ease,
+        );
+      }
+    }
   }
 
   @override
-  Future<bool> onCallerLoadDone() async {
-    return await onCallerRefreshDone();
+  void onCallerLoadDone(GentlemanRefreshState state) async {
+    onCallerRefreshDone(state);
   }
 }

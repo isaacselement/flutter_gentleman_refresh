@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gentleman_refresh/behavior/gentleman_physics.dart';
+import 'package:flutter_gentleman_refresh/view/gentleman_refresh.dart';
 
 enum IndicatorType {
   header,
   footer,
-}
-
-enum IndicatorZIndex {
-  above,
-  behind,
 }
 
 mixin Indicator on Widget {
@@ -22,11 +18,7 @@ mixin Indicator on Widget {
     return type == IndicatorType.header;
   }
 
-  IndicatorZIndex zIndex = IndicatorZIndex.above;
-
-  bool isBehind() {
-    return zIndex == IndicatorZIndex.behind;
-  }
+  ValueNotifier<double> positionNotifier = ValueNotifier<double>(-60.0);
 }
 
 enum IndicatorStatus {
@@ -43,26 +35,26 @@ enum IndicatorStatus {
   processed,
 }
 
-abstract class IndicatorState<T extends StatefulWidget> extends State<T> {
+abstract class IndicatorState<T extends StatefulWidget> extends State<T> with TickerProviderStateMixin {
   IndicatorStatus indicatorStatus = IndicatorStatus.initial;
 
   bool isIndicatorStatusLocked = false;
 
   /// outOfRange(true or false) status change
-  void onRangeStateChanged(GentlemanPhysics physics);
+  void onRangeStateChanged(GentlemanRefreshState state);
 
   /// position changing when outOfRange is true
-  void onPositionChangedOutOfRange(GentlemanPhysics physics);
+  void onPositionChangedOutOfRange(GentlemanRefreshState state);
 
   /// outOfPrison(true or false) status change
-  void onPrisonStateChanged(GentlemanPhysics physics, bool isOutOfPrison);
+  void onPrisonStateChanged(GentlemanRefreshState state, bool isOutOfPrison);
 
   /// finger released when outOfPrison is true
-  void onFingerReleasedOutOfPrison(GentlemanPhysics physics, bool isAutoRelease);
+  void onFingerReleasedOutOfPrison(GentlemanRefreshState state, bool isAutoRelease);
 
   /// when caller's refresh done, ask for more time or do some extra effect here
-  Future<bool> onCallerRefreshDone();
+  void onCallerRefreshDone(GentlemanRefreshState state);
 
   /// when caller's load done, ask for more time or do some extra effect here
-  Future<bool> onCallerLoadDone();
+  void onCallerLoadDone(GentlemanRefreshState state);
 }

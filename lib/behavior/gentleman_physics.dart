@@ -37,8 +37,8 @@ class GentlemanPhysics extends BouncingScrollPhysics {
 
   set setUserEvent(GentleEventType v) {
     if (userEventType != v) {
-      GentleClampPosition? c = _clampingPosition;
-      _clampingPosition = null;
+      GentleClampPosition? c = clampingPosition;
+      clampingPosition = null;
       userEventType = v;
       __log__('[Event] onUserEventChanged');
       onUserEventChanged?.call(this, c ?? position!, v);
@@ -59,25 +59,25 @@ class GentlemanPhysics extends BouncingScrollPhysics {
   }
 
   /// a fake position for clamping
-  GentleClampPosition? _clampingPosition;
+  GentleClampPosition? clampingPosition;
 
   void _invokeCallbacks() {
-    ScrollPosition p = position!;
-    GentleClampPosition? c = _clampingPosition;
+    ScrollPosition scrollPos = position!;
+    GentleClampPosition? clampPos = clampingPosition;
 
-    bool outOfRange = c?.outOfRange ?? p.outOfRange;
+    bool outOfRange = clampPos?.outOfRange ?? scrollPos.outOfRange;
 
     /// position changed
     if (onPositionChanged != null) {
       // __log__('[Event] onPositionChanged');
-      onPositionChanged?.call(this, c ?? p);
+      onPositionChanged?.call(this, clampPos ?? scrollPos);
     }
 
     /// range state changed
     if (isOutOfRang != outOfRange) {
       isOutOfRang = outOfRange;
       __log__('[Event] onRangeStateChanged');
-      onRangeStateChanged?.call(this, c ?? p);
+      onRangeStateChanged?.call(this, clampPos ?? scrollPos);
     }
 
     if (!outOfRange) {
@@ -92,12 +92,12 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     /// position changed on out of range
     if (onPositionChangedOutOfRange != null) {
       // __log__('[Event] onPositionChangedOutOfRange');
-      onPositionChangedOutOfRange?.call(this, c ?? p);
+      onPositionChangedOutOfRange?.call(this, clampPos ?? scrollPos);
     }
 
-    double pixels = c?.pixels ?? p.pixels;
-    double minScrollExtent = c?.minScrollExtent ?? p.minScrollExtent;
-    double maxScrollExtent = c?.maxScrollExtent ?? p.maxScrollExtent;
+    double pixels = clampPos?.pixels ?? scrollPos.pixels;
+    double minScrollExtent = clampPos?.minScrollExtent ?? scrollPos.minScrollExtent;
+    double maxScrollExtent = clampPos?.maxScrollExtent ?? scrollPos.maxScrollExtent;
 
     /// prison state changed on out of range
     double exceed = 0;
@@ -121,7 +121,7 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     if (isPrisonBroken != null) {
       isOutOfPrison = isPrisonBroken;
       __log__('[Event] onPrisonStatusChanged: ${isPrisonBroken ? 'walk out' : 'back to'} prison');
-      onPrisonStateChanged?.call(this, c ?? p, isOutOfPrison!);
+      onPrisonStateChanged?.call(this, clampPos ?? scrollPos, isOutOfPrison!);
     }
   }
 
@@ -163,18 +163,18 @@ class GentlemanPhysics extends BouncingScrollPhysics {
       bounds = value - position.maxScrollExtent;
     }
     if (bounds != 0) {
-      if (_clampingPosition == null) {
-        _clampingPosition = GentleClampPosition(
+      if (clampingPosition == null) {
+        clampingPosition = GentleClampPosition(
           pixels: position.pixels,
           minScrollExtent: position.minScrollExtent,
           maxScrollExtent: position.maxScrollExtent,
         );
-        _clampingPosition!.addListener(_invokeCallbacks);
+        clampingPosition!.addListener(_invokeCallbacks);
       }
     }
-    if (_clampingPosition != null) {
+    if (clampingPosition != null) {
       double inc = bounds != 0 ? value : (value - position.pixels);
-      _clampingPosition!.pixels = _clampingPosition!.pixels + inc;
+      clampingPosition!.pixels = clampingPosition!.pixels + inc;
     }
     __log__('applyBoundaryConditions ${position.pixels} : value: $value, $bounds, final: ${value - bounds}');
     return bounds;
