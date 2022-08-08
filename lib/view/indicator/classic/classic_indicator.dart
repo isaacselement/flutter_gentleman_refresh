@@ -118,7 +118,7 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
     return Container(
       height: widget.extent,
       alignment: Alignment.center,
-      color: Colors.orange,
+      color: Colors.grey.withOpacity(0.5),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -140,11 +140,11 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
 
   @override
   void onRangeStateChanged(GentlemanRefreshState state) {
-    if (isIndicatorStatusLocked) return;
-    GentlemanPhysics physics = state.physics;
+    if (IndicatorState.isIndicatorStatusLocked) return;
     indicatorStatus = IndicatorStatus.initial;
     setState(() {});
 
+    GentlemanPhysics physics = state.physics;
     bool isHeader = physics.isOnHeader();
     if (isHeader && physics.trailClamping) {
       return;
@@ -156,12 +156,11 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
 
   @override
   void onPrisonStateChanged(GentlemanRefreshState state, bool isOutOfPrison) {
-    if (isIndicatorStatusLocked) return;
+    if (IndicatorState.isIndicatorStatusLocked) return;
+    indicatorStatus = isOutOfPrison ? IndicatorStatus.ready : IndicatorStatus.initial;
     if (isOutOfPrison) {
-      indicatorStatus = IndicatorStatus.ready;
       animationController.animateTo(1, curve: Curves.easeInOut);
     } else {
-      indicatorStatus = IndicatorStatus.initial;
       animationController.animateBack(0, curve: Curves.easeInOut);
     }
     setState(() {});
@@ -169,14 +168,15 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
 
   @override
   void onFingerReleasedOutOfPrison(GentlemanRefreshState state, bool isAutoRelease) {
-    if (isIndicatorStatusLocked) return;
-    isIndicatorStatusLocked = true;
+    if (IndicatorState.isIndicatorStatusLocked) return;
+    IndicatorState.isIndicatorStatusLocked = true;
     indicatorStatus = IndicatorStatus.processing;
     setState(() {});
   }
 
   @override
   void onPositionChangedOutOfRange(GentlemanRefreshState state) {
+    if (IndicatorState.isIndicatorStatusLocked) return;
     GentlemanPhysics physics = state.physics;
     GentleClampPosition? position = physics.clampingPosition;
     double pixels = position != null ? position.pixels : physics.position!.pixels;
@@ -192,9 +192,9 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
 
   @override
   void onCallerRefreshDone(GentlemanRefreshState state) async {
-    isIndicatorStatusLocked = false;
-    GentlemanPhysics physics = state.physics;
+    IndicatorState.isIndicatorStatusLocked = false;
     indicatorStatus = IndicatorStatus.processed;
+    GentlemanPhysics physics = state.physics;
     widget.subTitleMap?[ClassicIndicator.keyLastUpdateAt] = DateTime.now();
     setState(() {});
     await Future.delayed(const Duration(milliseconds: 1500));
@@ -207,7 +207,7 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
         animation.addListener(() {
           widget.positionNotifier.value = -widget.extent * animation.value;
         });
-        ctrl.forward().then((value){
+        ctrl.forward().then((value) {
           ctrl.dispose();
         });
       } else {

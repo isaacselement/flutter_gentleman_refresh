@@ -35,9 +35,10 @@ enum IndicatorStatus {
 }
 
 abstract class IndicatorState<T extends StatefulWidget> extends State<T> with TickerProviderStateMixin {
-  IndicatorStatus indicatorStatus = IndicatorStatus.initial;
+  /// static preventing two indicators appear simultaneously
+  static bool isIndicatorStatusLocked = false;
 
-  bool isIndicatorStatusLocked = false;
+  IndicatorStatus indicatorStatus = IndicatorStatus.initial;
 
   /// outOfRange(true or false) status change
   void onRangeStateChanged(GentlemanRefreshState state);
