@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_gentleman_refresh/behavior/gentleman_behavior.dart';
@@ -44,12 +43,7 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
   void initState() {
     physics = GentlemanPhysics();
     physics.onPositionChangedOutOfRange = (GentlemanPhysics physics, dynamic position) {
-      double pixels = position is ScrollPosition ? position.pixels : (position as GentleClampPosition).pixels;
-      double minScrollExtent = position is ScrollPosition ? position.minScrollExtent : (position as GentleClampPosition).minScrollExtent;
-      double maxScrollExtent = position is ScrollPosition ? position.maxScrollExtent : (position as GentleClampPosition).maxScrollExtent;
-      bool isHeader = pixels < (maxScrollExtent - minScrollExtent) / 2;
-
-      if (isHeader) {
+      if (physics.isOnHeader()) {
         getHeaderState(context)?.onPositionChangedOutOfRange(this);
       } else {
         getFooterState(context)?.onPositionChangedOutOfRange(this);
@@ -57,12 +51,7 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
     };
 
     physics.onRangeStateChanged = (GentlemanPhysics physics, dynamic position) {
-      double pixels = position is ScrollPosition ? position.pixels : (position as GentleClampPosition).pixels;
-      double minScrollExtent = position is ScrollPosition ? position.minScrollExtent : (position as GentleClampPosition).minScrollExtent;
-      double maxScrollExtent = position is ScrollPosition ? position.maxScrollExtent : (position as GentleClampPosition).maxScrollExtent;
-      bool isHeader = pixels < (maxScrollExtent - minScrollExtent) / 2;
-
-      if (isHeader) {
+      if (physics.isOnHeader()) {
         getHeaderState(context)?.onRangeStateChanged(this);
       } else {
         getFooterState(context)?.onRangeStateChanged(this);
@@ -70,12 +59,7 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
     };
 
     physics.onPrisonStateChanged = (GentlemanPhysics physics, dynamic position, bool isOutOfPrison) {
-      double pixels = position is ScrollPosition ? position.pixels : (position as GentleClampPosition).pixels;
-      double minScrollExtent = position is ScrollPosition ? position.minScrollExtent : (position as GentleClampPosition).minScrollExtent;
-      double maxScrollExtent = position is ScrollPosition ? position.maxScrollExtent : (position as GentleClampPosition).maxScrollExtent;
-      bool isHeader = pixels < (maxScrollExtent - minScrollExtent) / 2;
-
-      if (isHeader) {
+      if (physics.isOnHeader()) {
         getHeaderState(context)?.onPrisonStateChanged(this, isOutOfPrison);
       } else {
         getFooterState(context)?.onPrisonStateChanged(this, isOutOfPrison);
@@ -89,10 +73,7 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
       if (eventType == GentleEventType.fingerDragStarted) {
         return;
       }
-      double pixels = position is ScrollPosition ? position.pixels : (position as GentleClampPosition).pixels;
-      double minScrollExtent = position is ScrollPosition ? position.minScrollExtent : (position as GentleClampPosition).minScrollExtent;
-      double maxScrollExtent = position is ScrollPosition ? position.maxScrollExtent : (position as GentleClampPosition).maxScrollExtent;
-      bool isHeader = pixels < (maxScrollExtent - minScrollExtent) / 2;
+      bool isHeader = physics.isOnHeader();
 
       () async {
         bool isAutoReleased = eventType == GentleEventType.autoReleased;

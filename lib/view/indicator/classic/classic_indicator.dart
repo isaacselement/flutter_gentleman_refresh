@@ -145,8 +145,7 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
     indicatorStatus = IndicatorStatus.initial;
     setState(() {});
 
-    ScrollPosition p = physics.position!;
-    bool isHeader = (p.pixels - p.minScrollExtent).abs() < (p.pixels - p.maxScrollExtent).abs();
+    bool isHeader = physics.isOnHeader();
     if (isHeader && physics.trailClamping) {
       return;
     } else if (!isHeader && physics.leadClamping) {
@@ -184,9 +183,9 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
     double minScrollExtent = position != null ? position.minScrollExtent : physics.position!.minScrollExtent;
     double maxScrollExtent = position != null ? position.maxScrollExtent : physics.position!.maxScrollExtent;
 
-    bool isHeader = pixels < minScrollExtent;
-    double exceed = (isHeader ? minScrollExtent : maxScrollExtent) - pixels;
+    bool isHeader = pixels < (maxScrollExtent - minScrollExtent) / 2;
 
+    double exceed = (isHeader ? minScrollExtent : maxScrollExtent) - pixels;
 
     widget.positionNotifier.value = min(0, isHeader ? -widget.extent + exceed : -widget.extent - exceed);
   }
@@ -200,8 +199,8 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
     setState(() {});
     await Future.delayed(const Duration(milliseconds: 1500));
     if (indicatorStatus == IndicatorStatus.processed) {
-      ScrollPosition p = physics.position!;
-      bool isHeader = (p.pixels - p.minScrollExtent).abs() < (p.pixels - p.maxScrollExtent).abs();
+      ScrollPosition position = physics.position!;
+
       if (widget.clamping) {
         AnimationController ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 250));
         Animation animation = CurveTween(curve: Curves.easeInOut).animate(ctrl);
@@ -212,8 +211,8 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
           ctrl.dispose();
         });
       } else {
-        p.animateTo(
-          isHeader ? p.minScrollExtent : p.maxScrollExtent,
+        position.animateTo(
+          physics.isOnHeader() ? position.minScrollExtent : position.maxScrollExtent,
           duration: const Duration(milliseconds: 250),
           curve: Curves.ease,
         );

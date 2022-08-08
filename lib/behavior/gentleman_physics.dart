@@ -9,42 +9,47 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     this.trailClamping = false,
   }) : super(parent: parent);
 
-  /// we define a concept of outOfPrison, which meaning the dragged position exceed the leading/trailing threshold
+  /// We define a concept of outOfPrison, which meaning the dragged position exceed the leading/trailing threshold
   double leading;
   double trailing;
 
-  /// when clamping, user cannot over/under scroll, so outOfRang in position always false.
+  /// When clamping, user cannot over/under scroll, so outOfRang in position always false.
   bool leadClamping;
   bool trailClamping;
 
-  /// positions change status and callbacks. outOfRange indicate that position exceed the min/maxScrollExtent
+  /// Positions change status and callbacks. outOfRange indicate that position exceed the minScrollExtent/maxScrollExtent
   bool? isOutOfRang;
   void Function(GentlemanPhysics physics, dynamic position)? onPositionChanged;
   void Function(GentlemanPhysics physics, dynamic position)? onRangeStateChanged;
   void Function(GentlemanPhysics physics, dynamic position)? onPositionChangedOutOfRange;
 
-  /// onPositionChangedOutOfRange & onPrisonStatusChanged:
-  /// caller should use p.pixels < p.minScrollExtent(or p.pixels > p.maxScrollExtent) for checking isHeader/isFooter or not
+  /// For onPositionChangedOutOfRange & onPrisonStatusChanged:
+  /// Caller should use p.pixels < (p.maxScrollExtent - p.minScrollExtent) / 2 for checking isHeader/isFooter or not
 
-  /// indicate that can be refreshed when release your finger (out of range an exceed the leading/trailing offset)
+  /// Indicate that can be refreshed when release your finger (out of range an exceed the leading/trailing offset)
   bool? isOutOfPrison;
   void Function(GentlemanPhysics physics, dynamic position, bool isOutOfPrison)? onPrisonStateChanged;
 
-  /// user drag or release event. isReleasedFinger = true means that finger up event, else finger down event
+  /// User drag or release event. isReleasedFinger = true means that finger up event, else finger down event
   GentleDragType? dragType;
   GentleEventType? userEventType;
   void Function(GentlemanPhysics physics, dynamic position, GentleEventType releaseType)? onUserEventChanged;
 
   set setUserEvent(GentleEventType v) {
     if (userEventType != v) {
+      userEventType = v;
+      __log__('[Event] onUserEventChanged: $v');
       GentleClampPosition? c = clampingPosition;
       clampingPosition = null;
-      userEventType = v;
-      __log__('[Event] onUserEventChanged');
       onUserEventChanged?.call(this, c ?? position!, v);
     }
   }
 
+  /// On all changed callback/event, the parameter `dynamic position` represent for ScrollPosition or GentleClampPosition
+  /// GentleClampPosition. A simulate position for clamping.
+  GentleClampPosition? clampingPosition;
+
+  /// ScrollPosition
   ScrollMetrics? _metrics;
 
   ScrollMetrics get metrics => _metrics!;
@@ -53,13 +58,9 @@ class GentlemanPhysics extends BouncingScrollPhysics {
 
   set metrics(ScrollMetrics v) {
     _metrics = v;
-
     position?.removeListener(_invokeCallbacks);
     position?.addListener(_invokeCallbacks);
   }
-
-  /// a fake position for clamping
-  GentleClampPosition? clampingPosition;
 
   void _invokeCallbacks() {
     ScrollPosition scrollPos = position!;
@@ -125,6 +126,19 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     }
   }
 
+  __log__(String message) {
+    assert(() {
+      print(message);
+      return true;
+    }());
+  }
+
+  /// Position now is on header part
+  bool isOnHeader() {
+    ScrollPosition position = this.position!;
+    return position.pixels < (position.maxScrollExtent - position.minScrollExtent) / 2;
+  }
+
   @override
   GentlemanPhysics applyTo(ScrollPhysics? ancestor) {
     return GentlemanPhysics(parent: buildParent(ancestor));
@@ -154,15 +168,15 @@ class GentlemanPhysics extends BouncingScrollPhysics {
   double applyBoundaryConditions(ScrollMetrics position, double value) {
     double bounds = 0;
 
-    /// when clamping is true, make the new pixel (value - bounds) = min/maxScrollExtent
-    if (leadClamping && value < position.minScrollExtent) {
-      /// prevent over scroll on header
-      bounds = value - position.minScrollExtent;
-    } else if (trailClamping && value > position.maxScrollExtent) {
-      /// prevent under scroll on footer
-      bounds = value - position.maxScrollExtent;
-    }
-    if (bounds != 0) {
+    // when clamping is true, make the new pixel (value - bounds) = minScrollExtent/maxScrollExtent
+    if (leadClamping || trailClamping) {
+      if (value < position.minScrollExtent) {
+        /// prevent over scroll on header
+        bounds = value - position.minScrollExtent;
+      } else if (value > position.maxScrollExtent) {
+        /// prevent under scroll on footer
+        bounds = value - position.maxScrollExtent;
+      }
       if (clampingPosition == null) {
         clampingPosition = GentleClampPosition(
           pixels: position.pixels,
@@ -171,12 +185,15 @@ class GentlemanPhysics extends BouncingScrollPhysics {
         );
         clampingPosition!.addListener(_invokeCallbacks);
       }
+      double increment = bounds == 0 ? value - position.pixels : value;
+      clampingPosition!.pixels = clampingPosition!.pixels + increment;
+      String fraction(double v) {
+        return v.toStringAsFixed(3);
+      }
+
+      __log__('applyBoundaryConditions ${fraction(position.pixels)}, value: ${fraction(value)}, bounds: ${fraction(bounds)}, '
+          'final: ${fraction(value - bounds)}, fake: ${fraction(clampingPosition!.pixels)}');
     }
-    if (clampingPosition != null) {
-      double inc = bounds != 0 ? value : (value - position.pixels);
-      clampingPosition!.pixels = clampingPosition!.pixels + inc;
-    }
-    __log__('applyBoundaryConditions ${position.pixels} : value: $value, $bounds, final: ${value - bounds}');
     return bounds;
   }
 
@@ -209,18 +226,18 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     __log__('Ballistic:::: Return null ballistic');
     return null;
   }
-
-  __log__(String message) {
-    assert(() {
-      print(message);
-      return true;
-    }());
-  }
 }
 
-enum GentleDragType { finger, auto }
+enum GentleDragType {
+  finger,
+  auto,
+}
 
-enum GentleEventType { fingerDragStarted, fingerReleased, autoReleased }
+enum GentleEventType {
+  fingerDragStarted,
+  fingerReleased,
+  autoReleased,
+}
 
 class GentleClampPosition with ChangeNotifier {
   GentleClampPosition({required double pixels, required this.minScrollExtent, required this.maxScrollExtent}) {

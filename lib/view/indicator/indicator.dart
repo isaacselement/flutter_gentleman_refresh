@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_gentleman_refresh/behavior/gentleman_physics.dart';
 import 'package:flutter_gentleman_refresh/view/gentleman_refresh.dart';
 
 enum IndicatorType {
