@@ -162,8 +162,8 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
       );
     }
 
-    widget.footer ??= ClassicIndicator(type: IndicatorType.footer)..clamping = true;
-    widget.header ??= ClassicIndicator(type: IndicatorType.header)..clamping = true;
+    widget.footer ??= ClassicIndicator(type: IndicatorType.footer)..clamping = false;
+    widget.header ??= ClassicIndicator(type: IndicatorType.header)..clamping = false;
     if (widget.footer is Indicator) {
       children.add(wrapWithPositioned(widget.footer as Indicator));
     }

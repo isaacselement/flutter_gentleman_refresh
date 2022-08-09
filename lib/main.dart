@@ -45,10 +45,10 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Center(
         child: GentlemanRefresh(
           onRefresh: () async {
-            await Future.delayed(const Duration(milliseconds: 2000));
+            await Future.delayed(const Duration(milliseconds: 5000));
           },
           onLoad: () async {
-            await Future.delayed(const Duration(milliseconds: 2000));
+            await Future.delayed(const Duration(milliseconds: 5000));
           },
           child: getScrollView(),
         ),

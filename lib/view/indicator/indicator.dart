@@ -34,9 +34,17 @@ enum IndicatorStatus {
   processed,
 }
 
+class IndicatorStatusLocked {
+  IndicatorType? lockedBy;
+
+  void setLocked(IndicatorType? v) => lockedBy = v;
+
+  bool get isLocked => lockedBy != null;
+}
+
 abstract class IndicatorState<T extends StatefulWidget> extends State<T> with TickerProviderStateMixin {
-  /// static preventing two indicators appear simultaneously
-  static bool isIndicatorStatusLocked = false;
+  /// static preventing two indicators refreshing & loading simultaneously
+  static IndicatorStatusLocked isIndicatorStatusLocked = IndicatorStatusLocked();
 
   IndicatorStatus indicatorStatus = IndicatorStatus.initial;
 

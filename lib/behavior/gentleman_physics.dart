@@ -7,7 +7,13 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     this.trailing = 0,
     this.leadClamping = false,
     this.trailClamping = false,
+    this.isLeaveMeAloneLeading,
+    this.isLeaveMeAloneTrailing,
   }) : super(parent: parent);
+
+  /// Use for: Do not bounce back to min or max extent when release finger in the state of refreshing or loading
+  bool? isLeaveMeAloneLeading;
+  bool? isLeaveMeAloneTrailing;
 
   /// We define a concept of outOfPrison, which meaning the dragged position exceed the leading/trailing threshold
   double leading;
@@ -121,7 +127,8 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     }
     if (isPrisonBroken != null) {
       isOutOfPrison = isPrisonBroken;
-      __log__('[Event] onPrisonStatusChanged: ${isPrisonBroken ? 'walk out' : 'back to'} prison');
+      __log__(
+          '[Event] onPrisonStatusChanged: ${isPrisonBroken ? 'walk out' : 'back to'} prison on ${isOnHeader() ? 'header' : 'footer'}');
       onPrisonStateChanged?.call(this, clampPos ?? scrollPos, isOutOfPrison!);
     }
   }
@@ -211,8 +218,8 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     /// copy the source from super, custom the extend by prison state
     final Tolerance tolerance = this.tolerance;
     if (velocity.abs() >= tolerance.velocity || position.outOfRange) {
-      double extHead = isOutOfPrison == true ? leading : 0;
-      double extFoot = isOutOfPrison == true ? trailing : 0;
+      double extHead = isLeaveMeAloneLeading == false ? 0 : (isLeaveMeAloneLeading == true || isOutOfPrison == true ? leading : 0);
+      double extFoot = isLeaveMeAloneTrailing == false ? 0 : (isLeaveMeAloneTrailing == true || isOutOfPrison == true ? trailing : 0);
       __log__('Ballistic:::: Return bouncing ballistic leading: $leading, trailing: $trailing, extHead: $extHead, extFoot: $extFoot');
       return BouncingScrollSimulation(
         spring: spring,

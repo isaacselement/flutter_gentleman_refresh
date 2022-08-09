@@ -42,17 +42,17 @@ class ClassicIndicator extends StatefulWidget with Indicator {
 }
 
 class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
-  late AnimationController animationController;
+  late AnimationController arrowAnimation;
 
   @override
   void initState() {
-    animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
+    arrowAnimation = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
     super.initState();
   }
 
   @override
   void dispose() {
-    animationController.dispose();
+    arrowAnimation.dispose();
     super.dispose();
   }
 
@@ -79,10 +79,10 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
       iconWidget = Icon(Icons.done, color: theme.color);
     } else {
       iconWidget = AnimatedBuilder(
-        animation: animationController,
+        animation: arrowAnimation,
         builder: (BuildContext context, Widget? child) {
           return Transform.rotate(
-            angle: animationController.value * -math.pi,
+            angle: arrowAnimation.value * -math.pi,
             child: Icon(widget.isHeader() ? Icons.arrow_downward : Icons.arrow_upward),
           );
         },
@@ -140,43 +140,45 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
 
   @override
   void onRangeStateChanged(GentlemanRefreshState state) {
-    if (IndicatorState.isIndicatorStatusLocked) return;
+    if (!widget.clamping) {
+      widget.positionNotifier.value = -widget.extent;
+    }
+    if (IndicatorState.isIndicatorStatusLocked.isLocked) return;
     indicatorStatus = IndicatorStatus.initial;
     setState(() {});
-
-    GentlemanPhysics physics = state.physics;
-    bool isHeader = physics.isOnHeader();
-    if (isHeader && physics.trailClamping) {
-      return;
-    } else if (!isHeader && physics.leadClamping) {
-      return;
-    }
-    widget.positionNotifier.value = -widget.extent;
   }
 
   @override
   void onPrisonStateChanged(GentlemanRefreshState state, bool isOutOfPrison) {
-    if (IndicatorState.isIndicatorStatusLocked) return;
+    if (IndicatorState.isIndicatorStatusLocked.isLocked) return;
     indicatorStatus = isOutOfPrison ? IndicatorStatus.ready : IndicatorStatus.initial;
-    if (isOutOfPrison) {
-      animationController.animateTo(1, curve: Curves.easeInOut);
-    } else {
-      animationController.animateBack(0, curve: Curves.easeInOut);
-    }
     setState(() {});
+    if (isOutOfPrison) {
+      arrowAnimation.animateTo(1, curve: Curves.easeInOut);
+    } else {
+      arrowAnimation.animateBack(0, curve: Curves.easeInOut);
+    }
   }
 
   @override
   void onFingerReleasedOutOfPrison(GentlemanRefreshState state, bool isAutoRelease) {
-    if (IndicatorState.isIndicatorStatusLocked) return;
-    IndicatorState.isIndicatorStatusLocked = true;
+    if (IndicatorState.isIndicatorStatusLocked.isLocked) return;
+    IndicatorState.isIndicatorStatusLocked.setLocked(widget.type);
     indicatorStatus = IndicatorStatus.processing;
     setState(() {});
+
+    if (widget.isHeader()) {
+      state.physics.isLeaveMeAloneLeading = true;
+      state.physics.isLeaveMeAloneTrailing = false;
+    } else {
+      state.physics.isLeaveMeAloneLeading = false;
+      state.physics.isLeaveMeAloneTrailing = true;
+    }
   }
 
   @override
   void onPositionChangedOutOfRange(GentlemanRefreshState state) {
-    if (IndicatorState.isIndicatorStatusLocked) return;
+    // if (IndicatorState.isIndicatorStatusLocked) return;
     GentlemanPhysics physics = state.physics;
     GentleClampPosition? position = physics.clampingPosition;
     double pixels = position != null ? position.pixels : physics.position!.pixels;
@@ -187,18 +189,20 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
 
     double exceed = (isHeader ? minScrollExtent : maxScrollExtent) - pixels;
 
-    widget.positionNotifier.value = min(0, isHeader ? -widget.extent + exceed : -widget.extent - exceed);
+    if (!IndicatorState.isIndicatorStatusLocked.isLocked || IndicatorState.isIndicatorStatusLocked.lockedBy == widget.type) {
+      widget.positionNotifier.value = min(0, isHeader ? -widget.extent + exceed : -widget.extent - exceed);
+    }
   }
 
   @override
   void onCallerRefreshDone(GentlemanRefreshState state) async {
-    IndicatorState.isIndicatorStatusLocked = false;
     indicatorStatus = IndicatorStatus.processed;
     GentlemanPhysics physics = state.physics;
     widget.subTitleMap?[ClassicIndicator.keyLastUpdateAt] = DateTime.now();
     setState(() {});
     await Future.delayed(const Duration(milliseconds: 1500));
     if (indicatorStatus == IndicatorStatus.processed) {
+      print('@@@@@@@@@@@@@ Done, im ${widget.isHeader() ? 'header' : 'footer'}');
       ScrollPosition position = physics.position!;
 
       if (widget.clamping) {
@@ -212,12 +216,16 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
         });
       } else {
         position.animateTo(
-          physics.isOnHeader() ? position.minScrollExtent : position.maxScrollExtent,
+          widget.isHeader() ? position.minScrollExtent : position.maxScrollExtent,
           duration: const Duration(milliseconds: 250),
           curve: Curves.ease,
         );
       }
     }
+
+    IndicatorState.isIndicatorStatusLocked.setLocked(null);
+    state.physics.isLeaveMeAloneLeading = null;
+    state.physics.isLeaveMeAloneTrailing = null;
   }
 
   @override
