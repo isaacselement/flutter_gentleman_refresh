@@ -59,8 +59,12 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
   @override
   void didUpdateWidget(covariant ClassicIndicator oldWidget) {
     super.didUpdateWidget(oldWidget);
-
-    /// TODO ... when refreshing, parent setState called result in blank ~~~
+    Future.microtask((){
+      widget.positionNotifier.value = oldWidget.positionNotifier.value;
+    });
+    // WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+    //   widget.positionNotifier.value = oldWidget.positionNotifier.value;
+    // });
   }
 
   @override
@@ -201,8 +205,8 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
     widget.subTitleMap?[ClassicIndicator.keyLastUpdateAt] = DateTime.now();
     setState(() {});
     await Future.delayed(const Duration(milliseconds: 1500));
+
     if (indicatorStatus == IndicatorStatus.processed) {
-      print('@@@@@@@@@@@@@ Done, im ${widget.isHeader() ? 'header' : 'footer'}');
       ScrollPosition position = physics.position!;
 
       if (widget.clamping) {
@@ -215,11 +219,17 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
           ctrl.dispose();
         });
       } else {
-        position.animateTo(
-          widget.isHeader() ? position.minScrollExtent : position.maxScrollExtent,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.ease,
-        );
+        if (position.outOfRange) {
+          bool isNeedBack = physics.isOnHeader() && widget.isHeader() || !physics.isOnHeader() && !widget.isHeader();
+          if (isNeedBack) {
+            double toPosition = widget.isHeader() ? position.minScrollExtent : position.maxScrollExtent;
+            position.animateTo(
+              toPosition,
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.ease,
+            );
+          }
+        }
       }
     }
 

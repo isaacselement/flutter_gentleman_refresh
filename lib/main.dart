@@ -35,6 +35,8 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   double extent = 60;
 
+  int listCount = 30;
+
   @override
   Widget build(BuildContext context) {
     print('>>>>>>>>>>>>>> rebuild!!!! $extent');
@@ -46,9 +48,13 @@ class _MyHomePageState extends State<MyHomePage> {
         child: GentlemanRefresh(
           onRefresh: () async {
             await Future.delayed(const Duration(milliseconds: 5000));
+            listCount += 8;
+            setState((){});
           },
           onLoad: () async {
             await Future.delayed(const Duration(milliseconds: 5000));
+            listCount += 15;
+            setState((){});
           },
           child: getScrollView(),
         ),
@@ -127,7 +133,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               );
             },
-            childCount: 30 * 2,
+            childCount: listCount * 2,
           ),
         ),
       ],
