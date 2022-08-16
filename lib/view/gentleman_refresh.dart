@@ -135,6 +135,10 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
     super.dispose();
   }
 
+  // create the default footer & header in advance here instead of in build method, prevent weird flash when parent setState
+  final ClassicIndicator _defaultFooter = ClassicIndicator(type: IndicatorType.footer)..clamping = false;
+  final ClassicIndicator _defaultHeader = ClassicIndicator(type: IndicatorType.header)..clamping = false;
+
   @override
   Widget build(BuildContext context) {
     List<Widget> children = [];
@@ -162,8 +166,8 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
       );
     }
 
-    widget.footer ??= ClassicIndicator(type: IndicatorType.footer)..clamping = false;
-    widget.header ??= ClassicIndicator(type: IndicatorType.header)..clamping = false;
+    widget.footer ??= _defaultFooter;
+    widget.header ??= _defaultHeader;
     if (widget.footer is Indicator) {
       children.add(wrapWithPositioned(widget.footer as Indicator));
     }

@@ -68,6 +68,9 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     position?.addListener(_invokeCallbacks);
   }
 
+  /// Indicate that dimension has been changed after refresh/load
+  void Function(GentlemanPhysics physics, ScrollMetrics old, ScrollMetrics now, bool scrolling, double velocity)? onDimensionChanged;
+
   void _invokeCallbacks() {
     ScrollPosition scrollPos = position!;
     GentleClampPosition? clampPos = clampingPosition;
@@ -127,8 +130,8 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     }
     if (isPrisonBroken != null) {
       isOutOfPrison = isPrisonBroken;
-      __log__(
-          '[Event] onPrisonStatusChanged: ${isPrisonBroken ? 'walk out' : 'back to'} prison on ${isOnHeader() ? 'header' : 'footer'}');
+      __log__('[Event] onPrisonStatusChanged: '
+          '${isPrisonBroken ? 'walk out' : 'back to'} prison on ${isOnHeader() ? 'header' : 'footer'}');
       onPrisonStateChanged?.call(this, clampPos ?? scrollPos, isOutOfPrison!);
     }
   }
@@ -148,11 +151,13 @@ class GentlemanPhysics extends BouncingScrollPhysics {
 
   @override
   GentlemanPhysics applyTo(ScrollPhysics? ancestor) {
+    // __log__('applyTo ancestor');
     return GentlemanPhysics(parent: buildParent(ancestor));
   }
 
   @override
   bool shouldAcceptUserOffset(ScrollMetrics position) {
+    // __log__('shouldAcceptUserOffset');
     return true; // AlwaysScrollableScrollPhysics
   }
 
@@ -167,7 +172,7 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     }
 
     double result = super.applyPhysicsToUserOffset(position, offset);
-    // __log__('applyPhysicsToUserOffset: $result');
+    __log__('applyPhysicsToUserOffset: $result');
     return result;
   }
 
@@ -198,10 +203,26 @@ class GentlemanPhysics extends BouncingScrollPhysics {
         return v.toStringAsFixed(3);
       }
 
-      __log__('applyBoundaryConditions ${fraction(position.pixels)}, value: ${fraction(value)}, bounds: ${fraction(bounds)}, '
+      __log__('applyBoundaryConditions ${fraction(position.pixels)}, '
+          'value: ${fraction(value)}, bounds: ${fraction(bounds)}, '
           'final: ${fraction(value - bounds)}, fake: ${fraction(clampingPosition!.pixels)}');
     }
     return bounds;
+  }
+
+  @override
+  double adjustPositionForNewDimensions({
+    required ScrollMetrics oldPosition,
+    required ScrollMetrics newPosition,
+    required bool isScrolling,
+    required double velocity,
+  }) {
+    __log__('adjustPositionForNewDimensions: '
+        '${oldPosition.maxScrollExtent} -> ${newPosition.maxScrollExtent}, '
+        'isScrolling: $isScrolling, velocity: $velocity');
+    onDimensionChanged?.call(this, oldPosition, newPosition, isScrolling, velocity);
+    return super
+        .adjustPositionForNewDimensions(oldPosition: oldPosition, newPosition: newPosition, isScrolling: isScrolling, velocity: velocity);
   }
 
   @override
@@ -220,7 +241,7 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     if (velocity.abs() >= tolerance.velocity || position.outOfRange) {
       double extHead = isLeaveMeAloneLeading == false ? 0 : (isLeaveMeAloneLeading == true || isOutOfPrison == true ? leading : 0);
       double extFoot = isLeaveMeAloneTrailing == false ? 0 : (isLeaveMeAloneTrailing == true || isOutOfPrison == true ? trailing : 0);
-      __log__('Ballistic:::: Return bouncing ballistic leading: $leading, trailing: $trailing, extHead: $extHead, extFoot: $extFoot');
+      __log__('[Ballistic] RETURN bouncing ballistic leading: $leading, trailing: $trailing, extHead: $extHead, extFoot: $extFoot');
       return BouncingScrollSimulation(
         spring: spring,
         velocity: velocity,
@@ -230,7 +251,7 @@ class GentlemanPhysics extends BouncingScrollPhysics {
         trailingExtent: position.maxScrollExtent + extFoot,
       );
     }
-    __log__('Ballistic:::: Return null ballistic');
+    __log__('[Ballistic] RETURN null ballistic');
     return null;
   }
 }

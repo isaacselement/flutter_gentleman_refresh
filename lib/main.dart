@@ -52,7 +52,7 @@ class _MyHomePageState extends State<MyHomePage> {
             setState((){});
           },
           onLoad: () async {
-            await Future.delayed(const Duration(milliseconds: 5000));
+            await Future.delayed(const Duration(milliseconds: 3000));
             listCount += 15;
             setState((){});
           },
@@ -62,6 +62,7 @@ class _MyHomePageState extends State<MyHomePage> {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           setState(() {});
+          print('>>>>>>>>>>>>>> setState');
           return;
 
           extent = extent == 60 ? 0 : 60;

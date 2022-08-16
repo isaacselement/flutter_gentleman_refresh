@@ -59,12 +59,7 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
   @override
   void didUpdateWidget(covariant ClassicIndicator oldWidget) {
     super.didUpdateWidget(oldWidget);
-    Future.microtask((){
-      widget.positionNotifier.value = oldWidget.positionNotifier.value;
-    });
-    // WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-    //   widget.positionNotifier.value = oldWidget.positionNotifier.value;
-    // });
+    widget.positionNotifier.value = oldWidget.positionNotifier.value;
   }
 
   @override
@@ -209,7 +204,7 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
     if (indicatorStatus == IndicatorStatus.processed) {
       ScrollPosition position = physics.position!;
 
-      if (widget.clamping) {
+      void animateBackManually() {
         AnimationController ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 250));
         Animation animation = CurveTween(curve: Curves.easeInOut).animate(ctrl);
         animation.addListener(() {
@@ -218,16 +213,29 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
         ctrl.forward().then((value) {
           ctrl.dispose();
         });
+      }
+
+      void animateBackByPosition() {
+        double to = widget.isHeader() ? position.minScrollExtent : position.maxScrollExtent;
+        position.animateTo(
+          to,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.ease,
+        );
+      }
+
+      if (widget.clamping) {
+        animateBackManually();
       } else {
-        if (position.outOfRange) {
-          bool isNeedBack = physics.isOnHeader() && widget.isHeader() || !physics.isOnHeader() && !widget.isHeader();
-          if (isNeedBack) {
-            double toPosition = widget.isHeader() ? position.minScrollExtent : position.maxScrollExtent;
-            position.animateTo(
-              toPosition,
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.ease,
-            );
+        bool isNeedBack = physics.isOnHeader() && widget.isHeader() || !physics.isOnHeader() && !widget.isHeader();
+        if (isNeedBack) {
+          if (position.outOfRange) {
+            animateBackByPosition();
+          } else {
+            /// situation: viewport's dimension changed when list items growth & setState
+            if (!widget.isHeader() && widget.positionNotifier.value > -widget.extent) {
+              animateBackManually();
+            }
           }
         }
       }
