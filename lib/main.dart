@@ -39,7 +39,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    print('>>>>>>>>>>>>>> rebuild!!!! $extent');
+    // print('>>>>>>>>>>>>>> rebuild!!!! $extent');
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
@@ -63,6 +63,11 @@ class _MyHomePageState extends State<MyHomePage> {
         onPressed: () {
           setState(() {});
           print('>>>>>>>>>>>>>> setState');
+
+          String string = ' ';
+          bool isMatched = RegExp(r'[0-9e]').hasMatch(string);
+          print('>>>>>>>>>>>>>> regex: $isMatched');
+
           return;
 
           extent = extent == 60 ? 0 : 60;

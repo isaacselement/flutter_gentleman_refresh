@@ -136,8 +136,8 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
   }
 
   // create the default footer & header in advance here instead of in build method, prevent weird flash when parent setState
-  final ClassicIndicator _defaultFooter = ClassicIndicator(type: IndicatorType.footer)..clamping = false;
-  final ClassicIndicator _defaultHeader = ClassicIndicator(type: IndicatorType.header)..clamping = false;
+  final ClassicIndicator _defaultFooter = ClassicIndicator(type: IndicatorType.footer)..clamping = true;
+  final ClassicIndicator _defaultHeader = ClassicIndicator(type: IndicatorType.header)..clamping = true;
 
   @override
   Widget build(BuildContext context) {
