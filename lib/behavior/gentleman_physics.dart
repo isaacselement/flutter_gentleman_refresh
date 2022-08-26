@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gentleman_refresh/view/util/glog.dart';
 
 class GentlemanPhysics extends BouncingScrollPhysics {
   GentlemanPhysics({
     ScrollPhysics? parent,
     this.leading = 0,
     this.trailing = 0,
-    this.leadClamping = false,
-    this.trailClamping = false,
+    this.isLeadClamping = false,
+    this.isTrailClamping = false,
     this.isLeaveMeAloneLeading,
     this.isLeaveMeAloneTrailing,
   }) : super(parent: parent);
@@ -20,8 +21,8 @@ class GentlemanPhysics extends BouncingScrollPhysics {
   double trailing;
 
   /// When clamping, user cannot over/under scroll, so outOfRang in position always false.
-  bool leadClamping;
-  bool trailClamping;
+  bool isLeadClamping;
+  bool isTrailClamping;
 
   /// Positions change status and callbacks. outOfRange indicate that position exceed the minScrollExtent/maxScrollExtent
   bool? isOutOfRang;
@@ -44,7 +45,7 @@ class GentlemanPhysics extends BouncingScrollPhysics {
   set setUserEvent(GentleEventType v) {
     if (userEventType != v) {
       userEventType = v;
-      __log__('[Event] onUserEventChanged: $v');
+      GLog.d('[Event] onUserEventChanged: $v, $isOutOfPrison');
       GentleClampPosition? c = clampingPosition;
       clampingPosition = null;
       onUserEventChanged?.call(this, c ?? position!, v);
@@ -79,14 +80,14 @@ class GentlemanPhysics extends BouncingScrollPhysics {
 
     /// position changed
     if (onPositionChanged != null) {
-      // __log__('[Event] onPositionChanged');
+      // GLog.d('[Event] onPositionChanged');
       onPositionChanged?.call(this, clampPos ?? scrollPos);
     }
 
     /// range state changed
     if (isOutOfRang != outOfRange) {
       isOutOfRang = outOfRange;
-      __log__('[Event] onRangeStateChanged');
+      GLog.d('[Event] onRangeStateChanged: $outOfRange');
       onRangeStateChanged?.call(this, clampPos ?? scrollPos);
     }
 
@@ -101,7 +102,7 @@ class GentlemanPhysics extends BouncingScrollPhysics {
 
     /// position changed on out of range
     if (onPositionChangedOutOfRange != null) {
-      // __log__('[Event] onPositionChangedOutOfRange');
+      // GLog.d('[Event] onPositionChangedOutOfRange');
       onPositionChangedOutOfRange?.call(this, clampPos ?? scrollPos);
     }
 
@@ -130,17 +131,11 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     }
     if (isPrisonBroken != null) {
       isOutOfPrison = isPrisonBroken;
-      __log__('[Event] onPrisonStatusChanged: '
-          '${isPrisonBroken ? 'walk out' : 'back to'} prison on ${isOnHeader() ? 'header' : 'footer'}');
+      GLog.d('[Event] onPrisonStatusChanged: '
+          '${isOnHeader() ? 'header' : 'footer'}, '
+          '${isPrisonBroken ? 'walk out' : 'back to'}');
       onPrisonStateChanged?.call(this, clampPos ?? scrollPos, isOutOfPrison!);
     }
-  }
-
-  __log__(String message) {
-    assert(() {
-      print(message);
-      return true;
-    }());
   }
 
   /// Position now is on header part
@@ -151,13 +146,12 @@ class GentlemanPhysics extends BouncingScrollPhysics {
 
   @override
   GentlemanPhysics applyTo(ScrollPhysics? ancestor) {
-    // __log__('applyTo ancestor');
+    // GLog.d('applyTo ancestor');
     return GentlemanPhysics(parent: buildParent(ancestor));
   }
 
   @override
   bool shouldAcceptUserOffset(ScrollMetrics position) {
-    // __log__('shouldAcceptUserOffset');
     return true; // AlwaysScrollableScrollPhysics
   }
 
@@ -172,7 +166,7 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     }
 
     double result = super.applyPhysicsToUserOffset(position, offset);
-    __log__('applyPhysicsToUserOffset: $result');
+    GLog.d('applyPhysicsToUserOffset: $result');
     return result;
   }
 
@@ -181,7 +175,7 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     double bounds = 0;
 
     // when clamping is true, make the new pixel (value - bounds) = minScrollExtent/maxScrollExtent
-    if (leadClamping || trailClamping) {
+    if (isLeadClamping || isTrailClamping) {
       if (value < position.minScrollExtent) {
         /// prevent over scroll on header
         bounds = value - position.minScrollExtent;
@@ -203,7 +197,7 @@ class GentlemanPhysics extends BouncingScrollPhysics {
         return v.toStringAsFixed(3);
       }
 
-      __log__('applyBoundaryConditions ${fraction(position.pixels)}, '
+      GLog.d('applyBoundaryConditions ${fraction(position.pixels)}, '
           'value: ${fraction(value)}, bounds: ${fraction(bounds)}, '
           'final: ${fraction(value - bounds)}, fake: ${fraction(clampingPosition!.pixels)}');
     }
@@ -217,8 +211,9 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     required bool isScrolling,
     required double velocity,
   }) {
-    __log__('adjustPositionForNewDimensions: '
-        '${oldPosition.maxScrollExtent} -> ${newPosition.maxScrollExtent}, '
+    GLog.d('adjustPositionForNewDimensions: '
+        '${oldPosition.maxScrollExtent}, '
+        '${newPosition.maxScrollExtent}, '
         'isScrolling: $isScrolling, velocity: $velocity');
     onDimensionChanged?.call(this, oldPosition, newPosition, isScrolling, velocity);
     return super
@@ -241,7 +236,7 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     if (velocity.abs() >= tolerance.velocity || position.outOfRange) {
       double extHead = isLeaveMeAloneLeading == false ? 0 : (isLeaveMeAloneLeading == true || isOutOfPrison == true ? leading : 0);
       double extFoot = isLeaveMeAloneTrailing == false ? 0 : (isLeaveMeAloneTrailing == true || isOutOfPrison == true ? trailing : 0);
-      __log__('[Ballistic] RETURN bouncing ballistic leading: $leading, trailing: $trailing, extHead: $extHead, extFoot: $extFoot');
+      GLog.d('[Ballistic] RETURN bouncing ballistic leading: $leading, trailing: $trailing, extHead: $extHead, extFoot: $extFoot');
       return BouncingScrollSimulation(
         spring: spring,
         velocity: velocity,
@@ -251,7 +246,7 @@ class GentlemanPhysics extends BouncingScrollPhysics {
         trailingExtent: position.maxScrollExtent + extFoot,
       );
     }
-    __log__('[Ballistic] RETURN null ballistic');
+    GLog.d('[Ballistic] RETURN null ballistic');
     return null;
   }
 }

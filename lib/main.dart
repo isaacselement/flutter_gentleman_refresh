@@ -35,7 +35,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   double extent = 60;
 
-  int listCount = 30;
+  int listCount = 15;
 
   @override
   Widget build(BuildContext context) {

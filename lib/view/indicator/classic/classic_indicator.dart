@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -139,12 +140,22 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
 
   @override
   void onRangeStateChanged(GentlemanRefreshState state) {
-    if (!widget.clamping) {
+    if (!widget.isClamping) {
       widget.positionNotifier.value = -widget.extent;
     }
     if (IndicatorState.isIndicatorStatusLocked.isLocked) return;
     indicatorStatus = IndicatorStatus.initial;
     setState(() {});
+  }
+
+  @override
+  FutureOr<bool> onFingerEvent(GentlemanRefreshState state, GentleEventType eventType) async {
+    if (widget.isClamping) {
+      if (state.physics.isOutOfPrison != true) {
+        await Future.delayed(const Duration(milliseconds: 200));
+      }
+    }
+    return super.onFingerEvent(state, eventType);
   }
 
   @override
@@ -224,7 +235,7 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
         );
       }
 
-      if (widget.clamping) {
+      if (widget.isClamping) {
         animateBackManually();
       } else {
         bool isNeedBack = physics.isOnHeader() && widget.isHeader() || !physics.isOnHeader() && !widget.isHeader();

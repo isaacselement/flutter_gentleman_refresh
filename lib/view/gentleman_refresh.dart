@@ -6,6 +6,7 @@ import 'package:flutter_gentleman_refresh/behavior/gentleman_physics.dart';
 import 'package:flutter_gentleman_refresh/elements_util.dart';
 import 'package:flutter_gentleman_refresh/view/indicator/classic/classic_indicator.dart';
 import 'package:flutter_gentleman_refresh/view/indicator/indicator.dart';
+import 'package:flutter_gentleman_refresh/view/util/glog.dart';
 
 class GentlemanRefresh extends StatefulWidget {
   GentlemanRefresh({
@@ -36,85 +37,65 @@ class GentlemanRefresh extends StatefulWidget {
 class GentlemanRefreshState extends State<GentlemanRefresh> {
   late GentlemanPhysics physics;
 
-  bool isCallingOnRefresh = false;
-  bool isCallingOnLoad = false;
+  bool isRequesting = false;
 
   @override
   void initState() {
     physics = GentlemanPhysics();
     physics.onPositionChangedOutOfRange = (GentlemanPhysics physics, dynamic position) {
-      if (physics.isOnHeader()) {
-        getHeaderState(context)?.onPositionChangedOutOfRange(this);
-      } else {
-        getFooterState(context)?.onPositionChangedOutOfRange(this);
-      }
+      getIndicatorState(physics, context)?.onPositionChangedOutOfRange(this);
     };
 
     physics.onRangeStateChanged = (GentlemanPhysics physics, dynamic position) {
-      if (physics.isOnHeader()) {
-        getHeaderState(context)?.onRangeStateChanged(this);
-      } else {
-        getFooterState(context)?.onRangeStateChanged(this);
-      }
+      getIndicatorState(physics, context)?.onRangeStateChanged(this);
     };
 
     physics.onPrisonStateChanged = (GentlemanPhysics physics, dynamic position, bool isOutOfPrison) {
-      if (physics.isOnHeader()) {
-        getHeaderState(context)?.onPrisonStateChanged(this, isOutOfPrison);
-      } else {
-        getFooterState(context)?.onPrisonStateChanged(this, isOutOfPrison);
-      }
+      getIndicatorState(physics, context)?.onPrisonStateChanged(this, isOutOfPrison);
     };
 
     physics.onUserEventChanged = (GentlemanPhysics physics, dynamic position, GentleEventType eventType) {
-      if (physics.isOutOfPrison != true) {
-        return;
-      }
       if (eventType == GentleEventType.fingerDragStarted) {
         return;
       }
-      bool isHeader = physics.isOnHeader();
 
       () async {
-        bool isAutoReleased = eventType == GentleEventType.autoReleased;
-        if (isHeader) {
-          getHeaderState(context)?.onFingerReleasedOutOfPrison(this, isAutoReleased);
+        if (await getIndicatorState(physics, context)?.onFingerEvent(this, eventType) == true) {
+          return;
+        }
 
-          if (isCallingOnRefresh) {
-            return;
-          }
-          isCallingOnRefresh = true;
+        if (physics.isOutOfPrison != true) {
+          return;
+        }
+        bool isAutoReleased = eventType == GentleEventType.autoReleased;
+
+        getIndicatorState(physics, context)?.onFingerReleasedOutOfPrison(this, isAutoReleased);
+
+        bool isHeader = physics.isOnHeader();
+        if (isHeader) {
           // invoked the caller's onRefresh method
           await () async {
             await widget.onRefresh?.call();
           }();
-          isCallingOnRefresh = false;
-
-          if (!mounted) {
-            return;
+          if (mounted) {
+            getHeaderState(context)?.onCallerRefreshDone(this);
           }
-          getHeaderState(context)?.onCallerRefreshDone(this);
         } else {
-          getFooterState(context)?.onFingerReleasedOutOfPrison(this, isAutoReleased);
-
-          if (isCallingOnLoad) {
-            return;
-          }
-          isCallingOnLoad = true;
           // invoked the caller's onLoad method
           await () async {
             await widget.onLoad?.call();
           }();
-          isCallingOnLoad = false;
-
-          if (!mounted) {
-            return;
+          if (mounted) {
+            getFooterState(context)?.onCallerLoadDone(this);
           }
-          getFooterState(context)?.onCallerLoadDone(this);
         }
       }();
     };
     super.initState();
+  }
+
+  static IndicatorState? getIndicatorState(GentlemanPhysics physics, BuildContext context) {
+    return physics.isOnHeader() ? getHeaderState(context) : getFooterState(context);
   }
 
   static IndicatorState? getHeaderState(BuildContext context) {
@@ -126,8 +107,8 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
   }
 
   static T? getState<T>(BuildContext? context, bool Function(T e) test) {
-    return (ElementsUtil.getElement(context, (e) => e is StatefulElement && e.state is T && test(e.state as T)) as StatefulElement?)
-        ?.state as T?;
+    Element? element = ElementsUtil.getElement(context, (e) => e is StatefulElement && e.state is T && test(e.state as T));
+    return (element is StatefulElement?) ? element?.state as T? : null;
   }
 
   @override
@@ -136,8 +117,8 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
   }
 
   // create the default footer & header in advance here instead of in build method, prevent weird flash when parent setState
-  final ClassicIndicator _defaultFooter = ClassicIndicator(type: IndicatorType.footer)..clamping = true;
-  final ClassicIndicator _defaultHeader = ClassicIndicator(type: IndicatorType.header)..clamping = true;
+  final ClassicIndicator _defaultFooter = ClassicIndicator(type: IndicatorType.footer)..isClamping = true;
+  final ClassicIndicator _defaultHeader = ClassicIndicator(type: IndicatorType.header)..isClamping = true;
 
   @override
   Widget build(BuildContext context) {
@@ -177,8 +158,8 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
 
     physics.leading = (widget.header! as Indicator).extent;
     physics.trailing = (widget.footer! as Indicator).extent;
-    physics.leadClamping = (widget.header! as Indicator).clamping;
-    physics.trailClamping = (widget.footer! as Indicator).clamping;
+    physics.isLeadClamping = (widget.header! as Indicator).isClamping;
+    physics.isTrailClamping = (widget.footer! as Indicator).isClamping;
 
     return Stack(
       fit: StackFit.loose,

@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_gentleman_refresh/behavior/gentleman_physics.dart';
 import 'package:flutter_gentleman_refresh/view/gentleman_refresh.dart';
 
 enum IndicatorType {
@@ -9,7 +12,7 @@ enum IndicatorType {
 mixin Indicator on Widget {
   double extent = 60.0;
 
-  bool clamping = false;
+  bool isClamping = false;
 
   IndicatorType type = IndicatorType.header;
 
@@ -56,6 +59,11 @@ abstract class IndicatorState<T extends StatefulWidget> extends State<T> with Ti
 
   /// outOfPrison(true or false) status change
   void onPrisonStateChanged(GentlemanRefreshState state, bool isOutOfPrison);
+
+  /// user's events include: finger released, finger dragged, auto released
+  FutureOr<bool> onFingerEvent(GentlemanRefreshState state, GentleEventType eventType) async {
+    return false;
+  }
 
   /// finger released when outOfPrison is true
   void onFingerReleasedOutOfPrison(GentlemanRefreshState state, bool isAutoRelease);
