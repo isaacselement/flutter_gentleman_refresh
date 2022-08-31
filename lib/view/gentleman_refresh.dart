@@ -6,7 +6,6 @@ import 'package:flutter_gentleman_refresh/behavior/gentleman_physics.dart';
 import 'package:flutter_gentleman_refresh/elements_util.dart';
 import 'package:flutter_gentleman_refresh/view/indicator/classic/classic_indicator.dart';
 import 'package:flutter_gentleman_refresh/view/indicator/indicator.dart';
-import 'package:flutter_gentleman_refresh/view/util/glog.dart';
 
 class GentlemanRefresh extends StatefulWidget {
   GentlemanRefresh({
@@ -55,38 +54,25 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
     };
 
     physics.onUserEventChanged = (GentlemanPhysics physics, dynamic position, GentleEventType eventType) {
-      if (eventType == GentleEventType.fingerDragStarted) {
-        return;
-      }
-
       () async {
-        if (await getIndicatorState(physics, context)?.onFingerEvent(this, eventType) == true) {
+        if ((await getIndicatorState(physics, context)?.onFingerEvent(this, eventType)) == true) {
           return;
         }
 
+        if (eventType == GentleEventType.fingerDragStarted) {
+          return;
+        }
         if (physics.isOutOfPrison != true) {
-          return;
-        }
-        bool isAutoReleased = eventType == GentleEventType.autoReleased;
+          getIndicatorState(physics, context)?.onFingerReleasedOutOfPrison(this, eventType == GentleEventType.autoReleased);
 
-        getIndicatorState(physics, context)?.onFingerReleasedOutOfPrison(this, isAutoReleased);
-
-        bool isHeader = physics.isOnHeader();
-        if (isHeader) {
-          // invoked the caller's onRefresh method
+          /// invoked the caller's onRefresh/onLoad method
+          FutureOr Function()? fn = physics.isOnHeader() ? widget.onRefresh : widget.onLoad;
           await () async {
-            await widget.onRefresh?.call();
+            await fn?.call();
           }();
+          /// clean up the states and reverse animations
           if (mounted) {
-            getHeaderState(context)?.onCallerRefreshDone(this);
-          }
-        } else {
-          // invoked the caller's onLoad method
-          await () async {
-            await widget.onLoad?.call();
-          }();
-          if (mounted) {
-            getFooterState(context)?.onCallerLoadDone(this);
+            getIndicatorState(physics, context)?.onCallerProcessDone(this);
           }
         }
       }();

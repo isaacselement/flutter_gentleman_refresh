@@ -143,24 +143,34 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
     if (!widget.isClamping) {
       widget.positionNotifier.value = -widget.extent;
     }
-    if (IndicatorState.isIndicatorStatusLocked.isLocked) return;
+    if (IndicatorState.isIndicatorProcessing.isProcessing) return;
     indicatorStatus = IndicatorStatus.initial;
     setState(() {});
   }
 
   @override
-  FutureOr<bool> onFingerEvent(GentlemanRefreshState state, GentleEventType eventType) async {
-    if (widget.isClamping) {
-      if (state.physics.isOutOfPrison != true) {
-        await Future.delayed(const Duration(milliseconds: 200));
-      }
+  void onPositionChangedOutOfRange(GentlemanRefreshState state) {
+    /// If isClamping type, preventing position change
+    /// Otherwise leave user to pull it down an up in refreshing/loading(aka processing) state
+    if (widget.isClamping && IndicatorState.isIndicatorProcessing.isProcessing) return;
+
+    GentlemanPhysics physics = state.physics;
+    GentleClampPosition? position = physics.clampingPosition;
+    double pixels = position != null ? position.pixels : physics.position!.pixels;
+    double minScrollExtent = position != null ? position.minScrollExtent : physics.position!.minScrollExtent;
+    double maxScrollExtent = position != null ? position.maxScrollExtent : physics.position!.maxScrollExtent;
+
+    bool isHeader = pixels < (maxScrollExtent - minScrollExtent) / 2;
+    double exceed = (isHeader ? minScrollExtent : maxScrollExtent) - pixels;
+
+    if (!IndicatorState.isIndicatorProcessing.isProcessing || IndicatorState.isIndicatorProcessing.onType == widget.type) {
+      widget.positionNotifier.value = min(0, isHeader ? -widget.extent + exceed : -widget.extent - exceed);
     }
-    return super.onFingerEvent(state, eventType);
   }
 
   @override
   void onPrisonStateChanged(GentlemanRefreshState state, bool isOutOfPrison) {
-    if (IndicatorState.isIndicatorStatusLocked.isLocked) return;
+    if (IndicatorState.isIndicatorProcessing.isProcessing) return;
     indicatorStatus = isOutOfPrison ? IndicatorStatus.ready : IndicatorStatus.initial;
     setState(() {});
     if (isOutOfPrison) {
@@ -171,41 +181,29 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
   }
 
   @override
+  FutureOr<bool> onFingerEvent(GentlemanRefreshState state, GentleEventType eventType) async {
+    if (widget.isClamping && eventType != GentleEventType.fingerDragStarted) {
+      if (state.physics.isOutOfPrison != true) {
+        await Future.delayed(const Duration(milliseconds: 200));
+      }
+    }
+    return super.onFingerEvent(state, eventType);
+  }
+
+  @override
   void onFingerReleasedOutOfPrison(GentlemanRefreshState state, bool isAutoRelease) {
-    if (IndicatorState.isIndicatorStatusLocked.isLocked) return;
-    IndicatorState.isIndicatorStatusLocked.setLocked(widget.type);
+    if (IndicatorState.isIndicatorProcessing.isProcessing) return;
+    IndicatorState.isIndicatorProcessing.setProcessingOn(widget.type);
     indicatorStatus = IndicatorStatus.processing;
     setState(() {});
 
-    if (widget.isHeader()) {
-      state.physics.isLeaveMeAloneLeading = true;
-      state.physics.isLeaveMeAloneTrailing = false;
-    } else {
-      state.physics.isLeaveMeAloneLeading = false;
-      state.physics.isLeaveMeAloneTrailing = true;
-    }
+    bool isHeader = widget.isHeader();
+    state.physics.isLeaveMeAloneLeading = isHeader;
+    state.physics.isLeaveMeAloneTrailing = !isHeader;
   }
 
   @override
-  void onPositionChangedOutOfRange(GentlemanRefreshState state) {
-    // if (IndicatorState.isIndicatorStatusLocked) return;
-    GentlemanPhysics physics = state.physics;
-    GentleClampPosition? position = physics.clampingPosition;
-    double pixels = position != null ? position.pixels : physics.position!.pixels;
-    double minScrollExtent = position != null ? position.minScrollExtent : physics.position!.minScrollExtent;
-    double maxScrollExtent = position != null ? position.maxScrollExtent : physics.position!.maxScrollExtent;
-
-    bool isHeader = pixels < (maxScrollExtent - minScrollExtent) / 2;
-
-    double exceed = (isHeader ? minScrollExtent : maxScrollExtent) - pixels;
-
-    if (!IndicatorState.isIndicatorStatusLocked.isLocked || IndicatorState.isIndicatorStatusLocked.lockedBy == widget.type) {
-      widget.positionNotifier.value = min(0, isHeader ? -widget.extent + exceed : -widget.extent - exceed);
-    }
-  }
-
-  @override
-  void onCallerRefreshDone(GentlemanRefreshState state) async {
+  void onCallerProcessDone(GentlemanRefreshState state) async {
     indicatorStatus = IndicatorStatus.processed;
     GentlemanPhysics physics = state.physics;
     widget.subTitleMap?[ClassicIndicator.keyLastUpdateAt] = DateTime.now();
@@ -252,13 +250,8 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
       }
     }
 
-    IndicatorState.isIndicatorStatusLocked.setLocked(null);
+    IndicatorState.isIndicatorProcessing.setProcessingOn(null);
     state.physics.isLeaveMeAloneLeading = null;
     state.physics.isLeaveMeAloneTrailing = null;
-  }
-
-  @override
-  void onCallerLoadDone(GentlemanRefreshState state) async {
-    onCallerRefreshDone(state);
   }
 }

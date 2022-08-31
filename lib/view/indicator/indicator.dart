@@ -37,17 +37,17 @@ enum IndicatorStatus {
   processed,
 }
 
-class IndicatorStatusLocked {
-  IndicatorType? lockedBy;
+class IndicatorIfProcessing {
+  IndicatorType? onType;
 
-  void setLocked(IndicatorType? v) => lockedBy = v;
+  void setProcessingOn(IndicatorType? v) => onType = v;
 
-  bool get isLocked => lockedBy != null;
+  bool get isProcessing => onType != null;
 }
 
 abstract class IndicatorState<T extends StatefulWidget> extends State<T> with TickerProviderStateMixin {
   /// static preventing two indicators refreshing & loading simultaneously
-  static IndicatorStatusLocked isIndicatorStatusLocked = IndicatorStatusLocked();
+  static IndicatorIfProcessing isIndicatorProcessing = IndicatorIfProcessing();
 
   IndicatorStatus indicatorStatus = IndicatorStatus.initial;
 
@@ -61,16 +61,11 @@ abstract class IndicatorState<T extends StatefulWidget> extends State<T> with Ti
   void onPrisonStateChanged(GentlemanRefreshState state, bool isOutOfPrison);
 
   /// user's events include: finger released, finger dragged, auto released
-  FutureOr<bool> onFingerEvent(GentlemanRefreshState state, GentleEventType eventType) async {
-    return false;
-  }
+  FutureOr<bool> onFingerEvent(GentlemanRefreshState state, GentleEventType eventType) async => false;
 
   /// finger released when outOfPrison is true
   void onFingerReleasedOutOfPrison(GentlemanRefreshState state, bool isAutoRelease);
 
-  /// when caller's refresh done, ask for more time or do some extra effect here
-  void onCallerRefreshDone(GentlemanRefreshState state);
-
-  /// when caller's load done, ask for more time or do some extra effect here
-  void onCallerLoadDone(GentlemanRefreshState state);
+  /// when caller's refresh/load done, ask for more time or do some extra effect here
+  void onCallerProcessDone(GentlemanRefreshState state);
 }
