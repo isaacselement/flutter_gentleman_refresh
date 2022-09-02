@@ -34,26 +34,33 @@ class GentlemanRefresh extends StatefulWidget {
 }
 
 class GentlemanRefreshState extends State<GentlemanRefresh> {
-  late GentlemanPhysics physics;
+  late GentlemanPhysics _physics;
 
-  bool isRequesting = false;
+  // GentlemanPhysics get physics => _physics;
+
+  bool isProcessing = false;
 
   @override
   void initState() {
-    physics = GentlemanPhysics();
-    physics.onPositionChangedOutOfRange = (GentlemanPhysics physics, dynamic position) {
+    super.initState();
+    initPhysics();
+  }
+
+  void initPhysics() {
+    _physics = GentlemanPhysics();
+    _physics.onPositionChangedOutOfRange = (GentlemanPhysics physics, dynamic position) {
       getIndicatorState(physics, context)?.onPositionChangedOutOfRange(this);
     };
 
-    physics.onRangeStateChanged = (GentlemanPhysics physics, dynamic position) {
+    _physics.onRangeStateChanged = (GentlemanPhysics physics, dynamic position) {
       getIndicatorState(physics, context)?.onRangeStateChanged(this);
     };
 
-    physics.onPrisonStateChanged = (GentlemanPhysics physics, dynamic position, bool isOutOfPrison) {
+    _physics.onPrisonStateChanged = (GentlemanPhysics physics, dynamic position, bool isOutOfPrison) {
       getIndicatorState(physics, context)?.onPrisonStateChanged(this, isOutOfPrison);
     };
 
-    physics.onUserEventChanged = (GentlemanPhysics physics, dynamic position, GentleEventType eventType) {
+    _physics.onUserEventChanged = (GentlemanPhysics physics, dynamic position, GentleEventType eventType) {
       () async {
         if ((await getIndicatorState(physics, context)?.onFingerEvent(this, eventType)) == true) {
           return;
@@ -62,7 +69,12 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
         if (eventType == GentleEventType.fingerDragStarted) {
           return;
         }
-        if (physics.isOutOfPrison != true) {
+        if (physics.isOutOfPrison == true) {
+          if (isProcessing) {
+            return;
+          }
+          isProcessing = true;
+
           getIndicatorState(physics, context)?.onFingerReleasedOutOfPrison(this, eventType == GentleEventType.autoReleased);
 
           /// invoked the caller's onRefresh/onLoad method
@@ -70,14 +82,37 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
           await () async {
             await fn?.call();
           }();
+
           /// clean up the states and reverse animations
           if (mounted) {
-            getIndicatorState(physics, context)?.onCallerProcessDone(this);
+            await getIndicatorState(physics, context)?.onCallerProcessingDone(this);
           }
+          isProcessing = false;
         }
       }();
     };
-    super.initState();
+  }
+
+  bool get isOnHeader => _physics.isOnHeader();
+
+  ScrollPosition get scrollPosition => _physics.position!;
+
+  GentleClampPosition? get clampingPosition => _physics.clampingPosition;
+
+  double get pixels => clampingPosition?.pixels ?? scrollPosition.pixels;
+
+  double get minScrollExtent => clampingPosition?.minScrollExtent ?? scrollPosition.minScrollExtent;
+
+  double get maxScrollExtent => clampingPosition?.maxScrollExtent ?? scrollPosition.maxScrollExtent;
+
+  void setBallisticLeaveMeAlone(bool? isLeavingHeader) {
+    if (isLeavingHeader != null) {
+      _physics.isLeaveMeAloneLeading = isLeavingHeader;
+      _physics.isLeaveMeAloneTrailing = !isLeavingHeader;
+    } else {
+      _physics.isLeaveMeAloneLeading = null;
+      _physics.isLeaveMeAloneTrailing = null;
+    }
   }
 
   static IndicatorState? getIndicatorState(GentlemanPhysics physics, BuildContext context) {
@@ -110,7 +145,7 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
   Widget build(BuildContext context) {
     List<Widget> children = [];
     Widget contentWidget = ScrollConfiguration(
-      behavior: GentlemanBehavior(physics: physics),
+      behavior: GentlemanBehavior(physics: _physics),
       child: widget.child ?? const Offstage(offstage: true),
     );
     children.add(contentWidget);
@@ -142,10 +177,10 @@ class GentlemanRefreshState extends State<GentlemanRefresh> {
       children.add(wrapWithPositioned(widget.header as Indicator));
     }
 
-    physics.leading = (widget.header! as Indicator).extent;
-    physics.trailing = (widget.footer! as Indicator).extent;
-    physics.isLeadClamping = (widget.header! as Indicator).isClamping;
-    physics.isTrailClamping = (widget.footer! as Indicator).isClamping;
+    _physics.leading = (widget.header! as Indicator).extent;
+    _physics.trailing = (widget.footer! as Indicator).extent;
+    _physics.isLeadClamping = (widget.header! as Indicator).isClamping;
+    _physics.isTrailClamping = (widget.footer! as Indicator).isClamping;
 
     return Stack(
       fit: StackFit.loose,

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gentleman_refresh/behavior/gentleman_physics.dart';
 import 'package:flutter_gentleman_refresh/view/gentleman_refresh.dart';
 import 'package:flutter_gentleman_refresh/view/indicator/indicator.dart';
+import 'package:flutter_gentleman_refresh/view/util/glog.dart';
 
 class ClassicIndicator extends StatefulWidget with Indicator {
   ClassicIndicator({
@@ -154,11 +155,9 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
     /// Otherwise leave user to pull it down an up in refreshing/loading(aka processing) state
     if (widget.isClamping && IndicatorState.isIndicatorProcessing.isProcessing) return;
 
-    GentlemanPhysics physics = state.physics;
-    GentleClampPosition? position = physics.clampingPosition;
-    double pixels = position != null ? position.pixels : physics.position!.pixels;
-    double minScrollExtent = position != null ? position.minScrollExtent : physics.position!.minScrollExtent;
-    double maxScrollExtent = position != null ? position.maxScrollExtent : physics.position!.maxScrollExtent;
+    double pixels = state.pixels;
+    double minScrollExtent = state.minScrollExtent;
+    double maxScrollExtent = state.maxScrollExtent;
 
     bool isHeader = pixels < (maxScrollExtent - minScrollExtent) / 2;
     double exceed = (isHeader ? minScrollExtent : maxScrollExtent) - pixels;
@@ -180,15 +179,15 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
     }
   }
 
-  @override
-  FutureOr<bool> onFingerEvent(GentlemanRefreshState state, GentleEventType eventType) async {
-    if (widget.isClamping && eventType != GentleEventType.fingerDragStarted) {
-      if (state.physics.isOutOfPrison != true) {
-        await Future.delayed(const Duration(milliseconds: 200));
-      }
-    }
-    return super.onFingerEvent(state, eventType);
-  }
+  // @override
+  // FutureOr<bool> onFingerEvent(GentlemanRefreshState state, GentleEventType eventType) async {
+  //   if (widget.isClamping && eventType != GentleEventType.fingerDragStarted) {
+  //     if (state.physics.isOutOfPrison != true) {
+  //       await Future.delayed(const Duration(milliseconds: 200));
+  //     }
+  //   }
+  //   return super.onFingerEvent(state, eventType);
+  // }
 
   @override
   void onFingerReleasedOutOfPrison(GentlemanRefreshState state, bool isAutoRelease) {
@@ -197,49 +196,41 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
     indicatorStatus = IndicatorStatus.processing;
     setState(() {});
 
-    bool isHeader = widget.isHeader();
-    state.physics.isLeaveMeAloneLeading = isHeader;
-    state.physics.isLeaveMeAloneTrailing = !isHeader;
+    state.setBallisticLeaveMeAlone(widget.isHeader());
   }
 
   @override
-  void onCallerProcessDone(GentlemanRefreshState state) async {
+  Future<void> onCallerProcessingDone(GentlemanRefreshState state) async {
     indicatorStatus = IndicatorStatus.processed;
-    GentlemanPhysics physics = state.physics;
     widget.subTitleMap?[ClassicIndicator.keyLastUpdateAt] = DateTime.now();
     setState(() {});
     await Future.delayed(const Duration(milliseconds: 1500));
 
     if (indicatorStatus == IndicatorStatus.processed) {
-      ScrollPosition position = physics.position!;
+
 
       void animateBackManually() {
-        AnimationController ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 250));
-        Animation animation = CurveTween(curve: Curves.easeInOut).animate(ctrl);
-        animation.addListener(() {
-          widget.positionNotifier.value = -widget.extent * animation.value;
-        });
-        ctrl.forward().then((value) {
-          ctrl.dispose();
-        });
+        animateToPosition(-widget.extent);
       }
 
-      void animateBackByPosition() {
-        double to = widget.isHeader() ? position.minScrollExtent : position.maxScrollExtent;
-        position.animateTo(
-          to,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.ease,
-        );
-      }
+
 
       if (widget.isClamping) {
         animateBackManually();
       } else {
-        bool isNeedBack = physics.isOnHeader() && widget.isHeader() || !physics.isOnHeader() && !widget.isHeader();
+        bool isNeedBack = state.isOnHeader && widget.isHeader() || !state.isOnHeader && !widget.isHeader();
         if (isNeedBack) {
+          ScrollPosition position = state.scrollPosition;
           if (position.outOfRange) {
-            animateBackByPosition();
+            void animatePositionBack4RestoreScrollView() {
+              double to = widget.isHeader() ? position.minScrollExtent : position.maxScrollExtent;
+              position.animateTo(
+                to,
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.ease,
+              );
+            }
+            animatePositionBack4RestoreScrollView();
           } else {
             /// situation: viewport's dimension changed when list items growth & setState
             if (!widget.isHeader() && widget.positionNotifier.value > -widget.extent) {
@@ -251,7 +242,17 @@ class ClassicIndicatorState extends IndicatorState<ClassicIndicator> {
     }
 
     IndicatorState.isIndicatorProcessing.setProcessingOn(null);
-    state.physics.isLeaveMeAloneLeading = null;
-    state.physics.isLeaveMeAloneTrailing = null;
+    state.setBallisticLeaveMeAlone(null);
+  }
+
+  void animateToPosition(double position) {
+    AnimationController ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 250));
+    Animation animation = CurveTween(curve: Curves.easeInOut).animate(ctrl);
+    animation.addListener(() {
+      widget.positionNotifier.value = position * animation.value;
+    });
+    ctrl.forward().then((value) {
+      ctrl.dispose();
+    });
   }
 }

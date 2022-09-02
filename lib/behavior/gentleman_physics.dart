@@ -166,7 +166,7 @@ class GentlemanPhysics extends BouncingScrollPhysics {
     }
 
     double result = super.applyPhysicsToUserOffset(position, offset);
-    GLog.d('applyPhysicsToUserOffset: $result');
+    // GLog.d('applyPhysicsToUserOffset: $result');
     return result;
   }
 
@@ -197,9 +197,9 @@ class GentlemanPhysics extends BouncingScrollPhysics {
         return v.toStringAsFixed(3);
       }
 
-      GLog.d('applyBoundaryConditions ${fraction(position.pixels)}, '
-          'value: ${fraction(value)}, bounds: ${fraction(bounds)}, '
-          'final: ${fraction(value - bounds)}, fake: ${fraction(clampingPosition!.pixels)}');
+      // GLog.d('applyBoundaryConditions ${fraction(position.pixels)}, '
+      //     'value: ${fraction(value)}, bounds: ${fraction(bounds)}, '
+      //     'final: ${fraction(value - bounds)}, fake: ${fraction(clampingPosition!.pixels)}');
     }
     return bounds;
   }

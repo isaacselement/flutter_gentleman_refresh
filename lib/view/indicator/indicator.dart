@@ -67,5 +67,5 @@ abstract class IndicatorState<T extends StatefulWidget> extends State<T> with Ti
   void onFingerReleasedOutOfPrison(GentlemanRefreshState state, bool isAutoRelease);
 
   /// when caller's refresh/load done, ask for more time or do some extra effect here
-  void onCallerProcessDone(GentlemanRefreshState state);
+  FutureOr<void> onCallerProcessingDone(GentlemanRefreshState state);
 }
